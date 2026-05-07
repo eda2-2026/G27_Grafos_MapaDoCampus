@@ -55,6 +55,26 @@
         <label for="pCapacidade">Capacidade minima</label>
         <input id="pCapacidade" type="number" min="0" placeholder="Ex: 40 (retorna >= 40)" />
 
+        <label for="pOrdenarPor">Ordenar resultado por</label>
+        <select id="pOrdenarPor">
+          <option value="">Padrao da busca</option>
+          <option value="id">ID</option>
+          <option value="nome">Nome</option>
+          <option value="capacidade">Capacidade</option>
+        </select>
+
+        <label for="pAlgoritmoOrdenacao">Algoritmo de ordenacao</label>
+        <select id="pAlgoritmoOrdenacao">
+          <option value="quicksort">QuickSort</option>
+          <option value="mergesort">MergeSort</option>
+        </select>
+
+        <label for="pOrdem">Ordem</label>
+        <select id="pOrdem">
+          <option value="asc">Crescente</option>
+          <option value="desc">Decrescente</option>
+        </select>
+
         <div class="actions full">
           <button type="submit">Pesquisar</button>
           <button type="button" id="btnLimparPesquisa" class="secondary">Limpar filtros</button>
@@ -111,6 +131,22 @@
         <h3>Locais cadastrados</h3>
         <p id="statusCadastro" class="resultado-status">Carregando locais cadastrados...</p>
         <div id="listaCadastrados" class="lista-locais"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Top Salas por Capacidade</h2>
+      <form id="formRanking" class="grid form-grid">
+        <label for="rTop">Quantidade no ranking</label>
+        <input id="rTop" type="number" min="1" value="10" />
+
+        <button type="submit" class="full">Gerar top capacidade (Heap Sort)</button>
+      </form>
+
+      <div class="resultado-pesquisa">
+        <h3>Ranking</h3>
+        <p id="statusRanking" class="resultado-status">Clique em gerar ranking para ver as maiores salas.</p>
+        <div id="listaRanking" class="lista-locais"></div>
       </div>
     </section>
   </main>

@@ -37,6 +37,26 @@ TabelaHash* criar_tabela_hash(size_t tamanho) {
     return tabela;
 }
 
+void destruir_tabela_hash(TabelaHash *tabela) {
+    if (tabela == NULL) {
+        return;
+    }
+
+    if (tabela->inicio != NULL) {
+        for (size_t i = 0; i < tabela->tamanho_total; i++) {
+            ListaEnc_hash *atual = tabela->inicio[i];
+            while (atual != NULL) {
+                ListaEnc_hash *proximo = atual->proximo;
+                free(atual);
+                atual = proximo;
+            }
+        }
+        free(tabela->inicio);
+    }
+
+    free(tabela);
+}
+
 void inserir_hash(TabelaHash *tabela, const Local *local_campus) {
     if (tabela == NULL || local_campus == NULL) return;
 

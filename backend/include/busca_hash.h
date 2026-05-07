@@ -17,6 +17,7 @@ typedef struct {
 } TabelaHash;
 
 TabelaHash* criar_tabela_hash(size_t tamanho);
+void destruir_tabela_hash(TabelaHash *tabela);
 void inserir_hash(TabelaHash *tabela, const Local *local_campus);
 const Local* buscar_hash(TabelaHash *tabela, const char *nome_buscado);
 

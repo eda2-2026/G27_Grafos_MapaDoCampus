@@ -13,6 +13,7 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 #include <unistd.h>
 
 #include "buscas.h"
+#include "ordenacao.h"
 #include "dataset.h"
 #include "util.h"
 #include "busca_hash.h"
@@ -34,6 +35,13 @@ typedef struct {
     int id_valor;
     int id_invalido;
 } FiltroMutavel;
+
+typedef struct {
+    int ativa;
+    OrdenacaoCampo campo;
+    int crescente;
+    OrdenacaoAlgoritmo algoritmo;
+} ConfigOrdenacao;
 
 static Local g_locais[CAPACIDADE_DATASET];
 static size_t g_total_locais = 0;
@@ -228,6 +236,24 @@ static size_t carregar_banco_csv(void) {
     return total;
 }
 
+static int reconstruir_hash(void) {
+    if (g_tabela_hash != NULL) {
+        destruir_tabela_hash(g_tabela_hash);
+        g_tabela_hash = NULL;
+    }
+
+    g_tabela_hash = criar_tabela_hash(200);
+    if (g_tabela_hash == NULL) {
+        return -1;
+    }
+
+    for (size_t i = 0; i < g_total_locais; i++) {
+        inserir_hash(g_tabela_hash, &g_locais[i]);
+    }
+
+    return 0;
+}
+
 static void inicializar_banco(void) {
     if (g_banco_inicializado) {
         return;
@@ -241,14 +267,8 @@ static void inicializar_banco(void) {
 
     ordenar_locais_por_id(g_locais, g_total_locais);
     g_banco_inicializado = 1;
-    
-//HASH
-    g_tabela_hash = criar_tabela_hash(200); 
-    
 
-    for (size_t i = 0; i < g_total_locais; i++) {
-        inserir_hash(g_tabela_hash, &g_locais[i]);
-    }
+    (void)reconstruir_hash();
 }
 
 //HASH
@@ -286,6 +306,87 @@ static void filtro_resetar(FiltroMutavel *destino) {
     destino->id_informado = 0;
     destino->id_valor = 0;
     destino->id_invalido = 0;
+}
+
+static void ordenacao_resetar(ConfigOrdenacao *destino) {
+    if (destino == NULL) {
+        return;
+    }
+
+    destino->ativa = 0;
+    destino->campo = ORDENACAO_CAMPO_ID;
+    destino->crescente = 1;
+    destino->algoritmo = ORDENACAO_ALGORITMO_QUICKSORT;
+}
+
+static int preencher_ordenacao_por_query(
+    ConfigOrdenacao *destino,
+    const char *query,
+    char *erro,
+    size_t erro_cap
+) {
+    if (destino == NULL) {
+        return -1;
+    }
+
+    if (query == NULL || *query == '\0') {
+        return 0;
+    }
+
+    char ordenar_por[32] = {0};
+    char algoritmo[32] = {0};
+    char ordem[16] = {0};
+
+    int tem_campo = query_get_param(query, "ordenarPor", ordenar_por, sizeof(ordenar_por)) == 0 &&
+                    ordenar_por[0] != '\0';
+    int tem_algoritmo = query_get_param(query, "algoritmoOrdenacao", algoritmo, sizeof(algoritmo)) == 0 &&
+                        algoritmo[0] != '\0';
+    int tem_ordem = query_get_param(query, "ordem", ordem, sizeof(ordem)) == 0 && ordem[0] != '\0';
+
+    if (!tem_campo && !tem_algoritmo && !tem_ordem) {
+        return 0;
+    }
+
+    destino->ativa = 1;
+
+    if (tem_campo) {
+        if (strings_iguais_case_insensitive(ordenar_por, "id")) {
+            destino->campo = ORDENACAO_CAMPO_ID;
+        } else if (strings_iguais_case_insensitive(ordenar_por, "nome")) {
+            destino->campo = ORDENACAO_CAMPO_NOME;
+        } else if (strings_iguais_case_insensitive(ordenar_por, "capacidade")) {
+            destino->campo = ORDENACAO_CAMPO_CAPACIDADE;
+        } else {
+            snprintf(erro, erro_cap, "ordenarPor invalido. Use: id, nome ou capacidade");
+            return -1;
+        }
+    }
+
+    if (tem_algoritmo) {
+        if (strings_iguais_case_insensitive(algoritmo, "quicksort")) {
+            destino->algoritmo = ORDENACAO_ALGORITMO_QUICKSORT;
+        } else if (strings_iguais_case_insensitive(algoritmo, "mergesort")) {
+            destino->algoritmo = ORDENACAO_ALGORITMO_MERGESORT;
+        } else if (strings_iguais_case_insensitive(algoritmo, "heapsort")) {
+            destino->algoritmo = ORDENACAO_ALGORITMO_HEAPSORT;
+        } else {
+            snprintf(erro, erro_cap, "algoritmoOrdenacao invalido. Use: quicksort, mergesort ou heapsort");
+            return -1;
+        }
+    }
+
+    if (tem_ordem) {
+        if (strings_iguais_case_insensitive(ordem, "asc")) {
+            destino->crescente = 1;
+        } else if (strings_iguais_case_insensitive(ordem, "desc")) {
+            destino->crescente = 0;
+        } else {
+            snprintf(erro, erro_cap, "ordem invalida. Use: asc ou desc");
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 static void preencher_filtro_por_query(FiltroMutavel *destino, const char *query) {
@@ -731,18 +832,57 @@ static void responder_locais_por_resultado(
     size_t total_base,
     const ResultadoBusca *resultado,
     const char *consulta,
-    const char *metodo_usado
+    const char *metodo_usado,
+    const ConfigOrdenacao *ordenacao
 ) {
+    Local locais_saida[MAX_RESULTADOS_BUSCA];
+    size_t total_saida = 0;
+
+    for (size_t i = 0; i < resultado->quantidade && total_saida < MAX_RESULTADOS_BUSCA; i++) {
+        size_t idx = resultado->indices[i];
+        if (idx < total_base) {
+            locais_saida[total_saida++] = locais_base[idx];
+        }
+    }
+
+    unsigned long comparacoes_ordenacao = 0;
+    const char *ordenacao_aplicada = "padrao";
+    if (ordenacao != NULL && ordenacao->ativa && total_saida > 1) {
+        if (ordenar_locais(
+                locais_saida,
+                total_saida,
+                ordenacao->campo,
+                ordenacao->crescente,
+                ordenacao->algoritmo,
+                &comparacoes_ordenacao
+            ) != 0) {
+            responder_json_erro(client_fd, 500, "Falha ao ordenar resultados");
+            return;
+        }
+        ordenacao_aplicada = ordenacao_nome_algoritmo(ordenacao->algoritmo);
+    }
+
+    const char *campo_ordenacao = "padrao";
+    const char *ordem_ordenacao = "asc";
+    if (ordenacao != NULL && ordenacao->ativa) {
+        campo_ordenacao = ordenacao_nome_campo(ordenacao->campo);
+        ordem_ordenacao = ordenacao->crescente ? "asc" : "desc";
+    }
+
     char body[RESP_BUF];
     size_t cursor = 0;
     int n = snprintf(
         body + cursor,
         sizeof(body) - cursor,
-        "{\"ok\":true,\"consulta\":\"%s\",\"metodoUsado\":\"%s\",\"comparacoes\":%lu,\"total\":%zu,\"locais\":[",
+        "{\"ok\":true,\"consulta\":\"%s\",\"metodoUsado\":\"%s\",\"comparacoes\":%lu,\"comparacoesOrdenacao\":%lu,\"ordenacao\":{\"algoritmo\":\"%s\",\"campo\":\"%s\",\"ordem\":\"%s\"},\"total\":%zu,\"locais\":[",
         consulta,
         metodo_usado,
         resultado->comparacoes,
-        resultado->quantidade
+        comparacoes_ordenacao,
+        ordenacao_aplicada,
+        campo_ordenacao,
+        ordem_ordenacao,
+        total_saida
     );
     if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
         responder_json_erro(client_fd, 500, "Falha ao montar resposta");
@@ -750,13 +890,81 @@ static void responder_locais_por_resultado(
     }
     cursor += (size_t)n;
 
-    for (size_t i = 0; i < resultado->quantidade; i++) {
-        size_t idx = resultado->indices[i];
-        if (idx >= total_base) {
-            continue;
+    for (size_t i = 0; i < total_saida; i++) {
+        if (json_append_local(body, sizeof(body), &cursor, &locais_saida[i], i > 0) != 0) {
+            responder_json_erro(client_fd, 500, "Resposta excedeu limite");
+            return;
         }
+    }
 
-        if (json_append_local(body, sizeof(body), &cursor, &locais_base[idx], i > 0) != 0) {
+    n = snprintf(body + cursor, sizeof(body) - cursor, "]}");
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
+}
+
+static void responder_ranking_capacidade(int client_fd, const char *query) {
+    int limite = 10;
+    char top_texto[16] = {0};
+
+    if (query_get_param(query, "top", top_texto, sizeof(top_texto)) == 0 && top_texto[0] != '\0') {
+        if (parse_int(top_texto, &limite) != 0 || limite <= 0) {
+            responder_json_erro(client_fd, 400, "Parametro top invalido. Use inteiro > 0");
+            return;
+        }
+    }
+
+    if (g_total_locais == 0) {
+        enviar_resposta(
+            client_fd,
+            200,
+            "OK",
+            "application/json; charset=utf-8",
+            "{\"ok\":true,\"metodoUsado\":\"heapsort(capacidade,desc)\",\"comparacoes\":0,\"total\":0,\"locais\":[]}"
+        );
+        return;
+    }
+
+    if ((size_t)limite > g_total_locais) {
+        limite = (int)g_total_locais;
+    }
+
+    Local ordenados[CAPACIDADE_DATASET];
+    memcpy(ordenados, g_locais, g_total_locais * sizeof(Local));
+
+    unsigned long comparacoes = 0;
+    if (ordenar_locais(
+            ordenados,
+            g_total_locais,
+            ORDENACAO_CAMPO_CAPACIDADE,
+            0,
+            ORDENACAO_ALGORITMO_HEAPSORT,
+            &comparacoes
+        ) != 0) {
+        responder_json_erro(client_fd, 500, "Falha ao ordenar ranking");
+        return;
+    }
+
+    char body[RESP_BUF];
+    size_t cursor = 0;
+    int n = snprintf(
+        body + cursor,
+        sizeof(body) - cursor,
+        "{\"ok\":true,\"metodoUsado\":\"heapsort(capacidade,desc)\",\"comparacoes\":%lu,\"total\":%d,\"locais\":[",
+        comparacoes,
+        limite
+    );
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    for (int i = 0; i < limite; i++) {
+        if (json_append_local(body, sizeof(body), &cursor, &ordenados[i], i > 0) != 0) {
             responder_json_erro(client_fd, 500, "Resposta excedeu limite");
             return;
         }
@@ -1003,20 +1211,25 @@ static size_t coletar_candidatos_tres_buscas(
     return total_candidatos;
 }
 
-static void responder_busca_automatica(int client_fd, const FiltroMutavel *dados_filtro) {
+static void responder_busca_automatica(
+    int client_fd,
+    const FiltroMutavel *dados_filtro,
+    const ConfigOrdenacao *ordenacao
+) {
     CampoPrincipal campo = escolher_campo_principal(dados_filtro);
-    
-    //hash
-    if (campo == CAMPO_PRINCIPAL_NOME && dados_filtro->filtro.nome != NULL) {
+
+    if (campo == CAMPO_PRINCIPAL_NOME && dados_filtro->filtro.nome != NULL && g_tabela_hash != NULL) {
         const Local *local_encontrado = buscar_hash(g_tabela_hash, dados_filtro->filtro.nome);
-        
+
         ResultadoBusca resultado_hash;
         resultado_inicializar(&resultado_hash);
-        
+
         if (local_encontrado != NULL) {
-            size_t indice_original = local_encontrado - g_locais; 
-            resultado_adicionar(&resultado_hash, indice_original);
-            resultado_hash.comparacoes = 1; 
+            size_t indice_original = (size_t)(local_encontrado - g_locais);
+            if (indice_original < g_total_locais) {
+                resultado_adicionar(&resultado_hash, indice_original);
+            }
+            resultado_hash.comparacoes = 1;
         }
 
         responder_locais_por_resultado(
@@ -1025,13 +1238,13 @@ static void responder_busca_automatica(int client_fd, const FiltroMutavel *dados
             g_total_locais,
             &resultado_hash,
             "nome",
-            "tabela_hash_O(1)"
+            "tabela_hash_O(1)",
+            ordenacao
         );
-        
+
         return;
     }
 
-    //hash
     if (campo == CAMPO_PRINCIPAL_NENHUM) {
         ResultadoBusca resultado;
         (void)filtrar_locais_direto(g_locais, g_total_locais, &dados_filtro->filtro, &resultado);
@@ -1041,7 +1254,8 @@ static void responder_busca_automatica(int client_fd, const FiltroMutavel *dados
             g_total_locais,
             &resultado,
             "textual",
-            "filtro_local"
+            "filtro_local",
+            ordenacao
         );
         return;
     }
@@ -1077,7 +1291,8 @@ static void responder_busca_automatica(int client_fd, const FiltroMutavel *dados
         total_candidatos,
         &resultado_final,
         nome_campo,
-        metodo_usado
+        metodo_usado,
+        ordenacao
     );
 }
 
@@ -1172,8 +1387,22 @@ static void tratar_api_locais_post(int client_fd, const char *body) {
         return;
     }
 
-    g_locais[g_total_locais++] = novo;
-    ordenar_locais_por_id(g_locais, g_total_locais);
+    unsigned long movimentacoes = 0;
+    if (inserir_local_ordenado_por_id(
+            g_locais,
+            &g_total_locais,
+            CAPACIDADE_DATASET,
+            &novo,
+            &movimentacoes
+        ) != 0) {
+        responder_json_erro(client_fd, 500, "Falha ao inserir local em ordem");
+        return;
+    }
+
+    if (reconstruir_hash() != 0) {
+        responder_json_erro(client_fd, 500, "Falha ao atualizar indice hash");
+        return;
+    }
 
     if (salvar_banco_csv() != 0) {
         responder_json_erro(client_fd, 500, "Falha ao salvar no banco local");
@@ -1184,8 +1413,9 @@ static void tratar_api_locais_post(int client_fd, const char *body) {
     snprintf(
         resposta,
         sizeof(resposta),
-        "{\"ok\":true,\"mensagem\":\"Local cadastrado com sucesso\",\"id\":%d}",
-        novo.id
+        "{\"ok\":true,\"mensagem\":\"Local cadastrado com sucesso\",\"id\":%d,\"metodoInsercao\":\"insertion_sort_id\",\"movimentacoes\":%lu}",
+        novo.id,
+        movimentacoes
     );
     enviar_resposta(client_fd, 201, "Created", "application/json; charset=utf-8", resposta);
 }
@@ -1216,8 +1446,20 @@ static void tratar_conexao(int client_fd) {
             200,
             "OK",
             "application/json; charset=utf-8",
-            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\"]}"
+            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\",\"GET /api/ranking/capacidade\"]}"
         );
+        return;
+    }
+
+    if (strncmp(uri, "/api/ranking/capacidade", 23) == 0 &&
+        (uri[23] == '\0' || uri[23] == '?')) {
+        if (strcmp(metodo_http, "GET") != 0) {
+            responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
+            return;
+        }
+
+        const char *query = strchr(uri, '?');
+        responder_ranking_capacidade(client_fd, query == NULL ? "" : query + 1);
         return;
     }
 
@@ -1230,8 +1472,16 @@ static void tratar_conexao(int client_fd) {
 
         const char *query = strchr(uri, '?');
         FiltroMutavel dados_filtro;
+        ConfigOrdenacao ordenacao;
+        char erro_ordenacao[128] = {0};
+
         filtro_resetar(&dados_filtro);
+        ordenacao_resetar(&ordenacao);
         preencher_filtro_por_query(&dados_filtro, query == NULL ? NULL : query + 1);
+        if (preencher_ordenacao_por_query(&ordenacao, query == NULL ? NULL : query + 1, erro_ordenacao, sizeof(erro_ordenacao)) != 0) {
+            responder_json_erro(client_fd, 400, erro_ordenacao);
+            return;
+        }
 
         if (dados_filtro.id_invalido) {
             responder_json_erro(client_fd, 400, "Parametro id invalido");
@@ -1243,7 +1493,7 @@ static void tratar_conexao(int client_fd) {
             return;
         }
 
-        responder_busca_automatica(client_fd, &dados_filtro);
+        responder_busca_automatica(client_fd, &dados_filtro, &ordenacao);
         return;
     }
 
@@ -1251,13 +1501,21 @@ static void tratar_conexao(int client_fd) {
         if (strcmp(metodo_http, "GET") == 0) {
             const char *query = strchr(uri, '?');
             FiltroMutavel dados_filtro;
+            ConfigOrdenacao ordenacao;
+            char erro_ordenacao[128] = {0};
+
             filtro_resetar(&dados_filtro);
+            ordenacao_resetar(&ordenacao);
             preencher_filtro_por_query(&dados_filtro, query == NULL ? NULL : query + 1);
+            if (preencher_ordenacao_por_query(&ordenacao, query == NULL ? NULL : query + 1, erro_ordenacao, sizeof(erro_ordenacao)) != 0) {
+                responder_json_erro(client_fd, 400, erro_ordenacao);
+                return;
+            }
             if (dados_filtro.id_invalido) {
                 responder_json_erro(client_fd, 400, "Parametro id invalido");
                 return;
             }
-            responder_busca_automatica(client_fd, &dados_filtro);
+            responder_busca_automatica(client_fd, &dados_filtro, &ordenacao);
             return;
         }
 

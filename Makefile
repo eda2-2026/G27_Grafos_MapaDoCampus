@@ -13,6 +13,7 @@ TARGET_API := bin/campus_api
 SRC_COMMON := \
 	backend/src/dataset.c \
 	backend/src/util.c \
+	backend/src/ordenacao.c \
 	backend/src/busca_binaria.c \
 	backend/src/busca_indexada.c \
 	backend/src/busca_hash.c \

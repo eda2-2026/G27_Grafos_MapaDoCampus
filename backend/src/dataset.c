@@ -46,3 +46,32 @@ void ordenar_locais_por_id(Local *locais, size_t total) {
     }
     qsort(locais, total, sizeof(Local), comparar_local_por_id);
 }
+
+int inserir_local_ordenado_por_id(
+    Local *locais,
+    size_t *total,
+    size_t capacidade,
+    const Local *novo_local,
+    unsigned long *movimentacoes
+) {
+    if (locais == NULL || total == NULL || novo_local == NULL || *total >= capacidade) {
+        return -1;
+    }
+
+    if (movimentacoes != NULL) {
+        *movimentacoes = 0;
+    }
+
+    size_t posicao = *total;
+    while (posicao > 0 && locais[posicao - 1].id > novo_local->id) {
+        locais[posicao] = locais[posicao - 1];
+        posicao--;
+        if (movimentacoes != NULL) {
+            (*movimentacoes)++;
+        }
+    }
+
+    locais[posicao] = *novo_local;
+    (*total)++;
+    return 0;
+}

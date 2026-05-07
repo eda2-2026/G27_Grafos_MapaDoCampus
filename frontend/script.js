@@ -8,12 +8,15 @@ const API_BASE = "http://localhost:8091";
 const formPesquisa = document.getElementById("formPesquisa");
 const btnLimparPesquisa = document.getElementById("btnLimparPesquisa");
 const formCadastro = document.getElementById("formCadastro");
+const formRanking = document.getElementById("formRanking");
 
 const statusPesquisa = document.getElementById("statusPesquisa");
 const listaPesquisa = document.getElementById("listaPesquisa");
 
 const statusCadastro = document.getElementById("statusCadastro");
 const listaCadastrados = document.getElementById("listaCadastrados");
+const statusRanking = document.getElementById("statusRanking");
+const listaRanking = document.getElementById("listaRanking");
 
 function setStatus(elemento, texto, erro = false) {
   elemento.textContent = texto;
@@ -108,6 +111,9 @@ function montarQueryPesquisa() {
   const horario = document.getElementById("pHorario").value.trim();
   const temAr = document.getElementById("pTemAr").value;
   const capacidade = document.getElementById("pCapacidade").value.trim();
+  const ordenarPor = document.getElementById("pOrdenarPor").value;
+  const algoritmoOrdenacao = document.getElementById("pAlgoritmoOrdenacao").value;
+  const ordem = document.getElementById("pOrdem").value;
 
   let idBusca = idDigitado;
   let nome = nomeOriginal;
@@ -133,6 +139,11 @@ function montarQueryPesquisa() {
   if (horario) params.set("horario", horario);
   if (temAr !== "") params.set("temAr", temAr);
   if (capacidade) params.set("capacidadeMin", capacidade);
+  if (ordenarPor) {
+    params.set("ordenarPor", ordenarPor);
+    if (algoritmoOrdenacao) params.set("algoritmoOrdenacao", algoritmoOrdenacao);
+    if (ordem) params.set("ordem", ordem);
+  }
 
   return params;
 }
@@ -149,9 +160,14 @@ async function pesquisarLocais() {
 
   const dados = await fetchJson(`${API_BASE}/api/busca?${sufixo}`);
   renderListaResultados(listaPesquisa, dados.locais || [], "Nenhum local encontrado com esses filtros.");
+
+  const ordenacao = dados.ordenacao || null;
+  const ordenacaoTexto = ordenacao
+    ? `${ordenacao.algoritmo || "padrao"}(${ordenacao.campo || "padrao"},${ordenacao.ordem || "asc"})`
+    : "padrao";
   setStatus(
     statusPesquisa,
-    `Metodo usado: ${dados.metodoUsado || "algoritmo"} | Consulta: ${dados.consulta || "auto"} | Total=${dados.total} | Comparacoes=${dados.comparacoes ?? "-"}.`
+    `Metodo usado: ${dados.metodoUsado || "algoritmo"} | Consulta: ${dados.consulta || "auto"} | Ordenacao=${ordenacaoTexto} | Total=${dados.total} | ComparacoesBusca=${dados.comparacoes ?? "-"} | ComparacoesOrdenacao=${dados.comparacoesOrdenacao ?? "-"}.`
   );
 }
 
@@ -159,6 +175,26 @@ async function carregarLocaisCadastrados() {
   const dados = await fetchJson(`${API_BASE}/api/locais`);
   renderListaResultados(listaCadastrados, dados.locais || [], "Nenhum local cadastrado.");
   setStatus(statusCadastro, `Total de locais cadastrados: ${dados.total}.`);
+}
+
+async function carregarRankingCapacidade() {
+  const top = document.getElementById("rTop").value.trim();
+  const params = new URLSearchParams();
+  if (top) {
+    params.set("top", top);
+  }
+
+  const sufixo = params.toString();
+  const url = sufixo
+    ? `${API_BASE}/api/ranking/capacidade?${sufixo}`
+    : `${API_BASE}/api/ranking/capacidade`;
+
+  const dados = await fetchJson(url);
+  renderListaResultados(listaRanking, dados.locais || [], "Sem resultados para esse ranking.");
+  setStatus(
+    statusRanking,
+    `Metodo usado: ${dados.metodoUsado || "heapsort"} | Total=${dados.total ?? 0} | Comparacoes=${dados.comparacoes ?? "-"}.`
+  );
 }
 
 formPesquisa.addEventListener("submit", async (event) => {
@@ -207,7 +243,12 @@ formCadastro.addEventListener("submit", async (event) => {
       body: payload.toString(),
     });
 
-    setStatus(statusCadastro, `${dados.mensagem}. ID criado: ${dados.id}.`);
+    const metodo = dados.metodoInsercao || "insertion_sort_id";
+    const movimentacoes = dados.movimentacoes ?? "-";
+    setStatus(
+      statusCadastro,
+      `${dados.mensagem}. ID criado: ${dados.id}. Metodo: ${metodo}. Movimentacoes=${movimentacoes}.`
+    );
     formCadastro.reset();
     await carregarLocaisCadastrados();
   } catch (erro) {
@@ -216,10 +257,24 @@ formCadastro.addEventListener("submit", async (event) => {
   }
 });
 
+formRanking.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setStatus(statusRanking, "Gerando ranking...");
+
+  try {
+    await carregarRankingCapacidade();
+  } catch (erro) {
+    setStatus(statusRanking, `Falha ao gerar ranking: ${erro.message}`, true);
+    renderErroEmCard(listaRanking, erro.message);
+  }
+});
+
 (async function iniciarTela() {
   renderListaResultados(listaPesquisa, [], "Digite ao menos um filtro para pesquisar.");
+  renderListaResultados(listaRanking, [], "Clique em gerar ranking para ver as maiores salas.");
   try {
     await carregarLocaisCadastrados();
+    await carregarRankingCapacidade();
   } catch (erro) {
     setStatus(
       statusCadastro,
@@ -231,5 +286,7 @@ formCadastro.addEventListener("submit", async (event) => {
       true
     );
     renderErroEmCard(listaCadastrados, erro.message);
+    setStatus(statusRanking, `Falha ao carregar ranking: ${erro.message}`, true);
+    renderErroEmCard(listaRanking, erro.message);
   }
 })();

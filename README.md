@@ -66,8 +66,12 @@ Após rodar os dois comandos, abra o seu navegador e acesse: `http://localhost:5
 
 **Documentação da API Disponível:**
 * `GET /api/busca`: Busca com filtros (ex: `id`, `nome`, `bloco`, `andar`, `tipo`, `responsavel`, `materia`, `horario`, `temAr`, `capacidadeMin`). O sistema decide automaticamente qual algoritmo (Binária, Interpolada, Indexada ou Hash) utilizar com base no parâmetro fornecido.
-* `GET /api/locais`: Lista todos os locais cadastrados.
+  * Ordenação opcional dos resultados: `ordenarPor=id|nome|capacidade`, `algoritmoOrdenacao=quicksort|mergesort`, `ordem=asc|desc`.
+* `GET /api/locais`: Lista todos os locais cadastrados (também aceita os parâmetros de ordenação opcionais).
 * `POST /api/locais`: Cadastro de novo local (form urlencoded) com os campos obrigatórios: `id`, `nome`, `bloco`, `andar`, `tipo`, `capacidade`, `temAr`, `responsavel`, `materia`, `horario`.
+  * Inserção inteligente por `id` usando lógica de **Insertion Sort** (insere na posição correta sem reordenar a lista inteira).
+* `GET /api/ranking/capacidade`: Ranking de maiores salas por capacidade usando **Heap Sort**.
+  * Parâmetro opcional: `top` (ex: `GET /api/ranking/capacidade?top=10`).
 
 *Exemplo de requisição de busca nativa via terminal (cURL):*
 ```bash
