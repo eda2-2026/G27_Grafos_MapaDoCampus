@@ -1,5 +1,6 @@
 #include "dataset.h"
 
+#include <limits.h>
 #include <stdlib.h>
 
 static const Local DATASET_EXEMPLO[] = {
@@ -62,16 +63,42 @@ int inserir_local_ordenado_por_id(
         *movimentacoes = 0;
     }
 
-    size_t posicao = *total;
-    while (posicao > 0 && locais[posicao - 1].id > novo_local->id) {
-        locais[posicao] = locais[posicao - 1];
-        posicao--;
+    size_t total_atual = *total;
+
+    if (total_atual == 0) {
+        locais[0] = *novo_local;
+        *total = 1;
+        return 0;
+    }
+
+    Local *aux = (Local *)malloc((total_atual + 2) * sizeof(Local));
+    if (aux == NULL) {
+        return -1;
+    }
+
+    // Sentinela: garante parada do while sem checagem de limite (j > 0).
+    aux[0] = *novo_local;
+    aux[0].id = INT_MIN;
+
+    for (size_t i = 0; i < total_atual; i++) {
+        aux[i + 1] = locais[i];
+    }
+
+    size_t j = total_atual + 1;
+    while (aux[j - 1].id > novo_local->id) {
+        aux[j] = aux[j - 1];
+        j--;
         if (movimentacoes != NULL) {
             (*movimentacoes)++;
         }
     }
+    aux[j] = *novo_local;
 
-    locais[posicao] = *novo_local;
-    (*total)++;
+    for (size_t i = 0; i <= total_atual; i++) {
+        locais[i] = aux[i + 1];
+    }
+
+    *total = total_atual + 1;
+    free(aux);
     return 0;
 }
