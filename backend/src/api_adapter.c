@@ -1463,7 +1463,25 @@ static void tratar_conexao(int client_fd) {
         return;
     }
 
+    // --- NOVA ROTA: AGENDA DO PROFESSOR (ENTREGA 2) ---
+    if (strncmp(uri, "/api/agenda", 11) == 0) {
+        if (strcmp(metodo_http, "GET") != 0) {
+            responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
+            return;
+        }
 
+        const char *query = strchr(uri, '?');
+        char professor[160] = {0};
+        
+        if (query != NULL) {
+            query_get_param(query + 1, "responsavel", professor, sizeof(professor));
+        }
+
+        responder_agenda(client_fd, professor);
+        return;
+    }
+
+/*---------------------------------------------------------------------------------------*/
     if (strncmp(uri, "/api/busca", 10) == 0) {
         if (strcmp(metodo_http, "GET") != 0) {
             responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
