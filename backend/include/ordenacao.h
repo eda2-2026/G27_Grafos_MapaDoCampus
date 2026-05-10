@@ -29,4 +29,6 @@ int ordenar_locais(
 const char *ordenacao_nome_campo(OrdenacaoCampo campo);
 const char *ordenacao_nome_algoritmo(OrdenacaoAlgoritmo algoritmo);
 
+void mergesort_agenda_iterativo(Local *locais, int total);
+
 #endif

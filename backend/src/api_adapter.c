@@ -23,6 +23,8 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 #define RESP_BUF 65536
 #define DB_PATH "backend/data/locais.csv"
 
+static void responder_agenda(int client_fd, const char *professor);
+
 typedef struct {
     FiltroLocal filtro;
     char nome[NOME_MAX];
@@ -1463,25 +1465,25 @@ static void tratar_conexao(int client_fd) {
         return;
     }
 
-    // --- NOVA ROTA: AGENDA DO PROFESSOR (ENTREGA 2) ---
+
+    // ==========================================
+    // ROTA MERGE SORT
+    // ==========================================
     if (strncmp(uri, "/api/agenda", 11) == 0) {
         if (strcmp(metodo_http, "GET") != 0) {
             responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
             return;
         }
-
         const char *query = strchr(uri, '?');
         char professor[160] = {0};
-        
         if (query != NULL) {
             query_get_param(query + 1, "responsavel", professor, sizeof(professor));
         }
-
         responder_agenda(client_fd, professor);
         return;
     }
 
-/*---------------------------------------------------------------------------------------*/
+
     if (strncmp(uri, "/api/busca", 10) == 0) {
         if (strcmp(metodo_http, "GET") != 0) {
             responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
@@ -1554,6 +1556,50 @@ static void tratar_conexao(int client_fd) {
     }
 
     responder_json_erro(client_fd, 404, "Rota nao encontrada");
+}
+
+// ==========================================
+// MERGE SORT
+// ==========================================
+static void responder_agenda(int client_fd, const char *professor) {
+    if (professor == NULL || professor[0] == '\0') {
+        responder_json_erro(client_fd, 400, "Professor nao informado.");
+        return;
+    }
+
+    Local *agenda = (Local *)malloc(g_total_locais * sizeof(Local));
+    if (!agenda) {
+        responder_json_erro(client_fd, 500, "Erro de memoria.");
+        return;
+    }
+
+    int qtd = 0;
+    for (size_t i = 0; i < g_total_locais; i++) {
+        if (strings_iguais_case_insensitive(g_locais[i].responsavel, professor)) {
+            agenda[qtd++] = g_locais[i];
+        }
+    }
+
+    mergesort_agenda_iterativo(agenda, qtd);
+
+    char *json = (char *)malloc(RESP_BUF);
+    if (!json) {
+        free(agenda);
+        responder_json_erro(client_fd, 500, "Erro de memoria.");
+        return;
+    }
+
+    size_t cursor = 0;
+    cursor += snprintf(json + cursor, RESP_BUF - cursor, "{\"ok\":true,\"total\":%d,\"dados\":[", qtd);
+
+    for (int i = 0; i < qtd; i++) {
+        json_append_local(json, RESP_BUF, &cursor, &agenda[i], i > 0);
+    }
+    snprintf(json + cursor, RESP_BUF - cursor, "]}");
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", json);
+    free(json);
+    free(agenda);
 }
 
 int main(int argc, char **argv) {

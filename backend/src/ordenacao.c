@@ -126,82 +126,61 @@ static void quicksort_rec(
     quicksort_rec(locais, pivo + 1, fim, campo, crescente, comparacoes);
 }
 
-/*MERGE SORT------------------------------------------------*/
+static int mergesort_mesclar(
+    Local *locais,
+    Local *temp,
+    size_t inicio,
+    size_t meio,
+    size_t fim,
+    OrdenacaoCampo campo,
+    int crescente,
+    unsigned long *comparacoes
+) {
+    size_t i = inicio;
+    size_t j = meio;
+    size_t k = inicio;
 
-int comparar_agenda(const Local *a, const Local *b) {
-    //horários das duas salas
-    int compara_horario = strcmp(a->horario, b->horario);
-    // se horários diferentes, a decisão já está tomada
-    if (compara_horario != 0) {
-        return compara_horario;
-    }
-    //se empatou no horário, vai pelo nome da sala
-    return strcmp(a->nome, b->nome);
-}
-
-void merge_agenda(Local *locais, Local *temp, int inicio, int meio, int fim) {
-    int i = inicio; 
-    int j = meio;   
-    int k = inicio; 
-
-    
     while (i < meio && j < fim) {
-
-        if (comparar_agenda(&locais[i], &locais[j]) <= 0) {
-            temp[k] = locais[i];
-            i++;
+        if (comparar_para_ordem(&locais[i], &locais[j], campo, crescente, comparacoes) <= 0) {
+            temp[k++] = locais[i++];
         } else {
-            temp[k] = locais[j];
-            j++;
+            temp[k++] = locais[j++];
         }
-        k++;
     }
-    //sobrou esquerda
+
     while (i < meio) {
-        temp[k] = locais[i];
-        i++;
-        k++;
+        temp[k++] = locais[i++];
     }
-    //sobrou direita
     while (j < fim) {
-        temp[k] = locais[j];
-        j++;
-        k++;
+        temp[k++] = locais[j++];
     }
 
-    for (int p = inicio; p < fim; p++) {
-        locais[p] = temp[p];
-    }
+    memcpy(&locais[inicio], &temp[inicio], (fim - inicio) * sizeof(Local));
+    return 0;
 }
 
-int min_agenda(int a, int b) {
-    return (a < b) ? a : b;
-}
-
-void mergesort_agenda_iterativo(Local *locais, int total) {
-    // 1. Alocando a "Mesa de Rascunho" UMA única vez
-    Local *temp = (Local *)malloc(total * sizeof(Local));
-    
-    if (temp == NULL) {
-        return; 
+static int mergesort_rec(
+    Local *locais,
+    Local *temp,
+    size_t inicio,
+    size_t fim,
+    OrdenacaoCampo campo,
+    int crescente,
+    unsigned long *comparacoes
+) {
+    if (fim - inicio <= 1) {
+        return 0;
     }
 
-    for (int gap = 1; gap < total; gap *= 2) {
-        
-        for (int inicio = 0; inicio < total; inicio += 2 * gap) {
-            
-            int meio = min_agenda(inicio + gap, total);
-            int fim = min_agenda(inicio + 2 * gap, total);
-            
-            merge_agenda(locais, temp, inicio, meio, fim);
-        }
+    size_t meio = inicio + (fim - inicio) / 2;
+    if (mergesort_rec(locais, temp, inicio, meio, campo, crescente, comparacoes) != 0) {
+        return -1;
     }
-
-    free(temp);
+    if (mergesort_rec(locais, temp, meio, fim, campo, crescente, comparacoes) != 0) {
+        return -1;
+    }
+    return mergesort_mesclar(locais, temp, inicio, meio, fim, campo, crescente, comparacoes);
 }
-
-/*FIM MERGE SORTO ------------------------------------------------------------------------------------------*/
-
 
 static void heapsort_heapify(
     Local *locais,
@@ -319,4 +298,69 @@ const char *ordenacao_nome_algoritmo(OrdenacaoAlgoritmo algoritmo) {
         default:
             return "quicksort";
     }
+}
+
+// ==========================================
+// MERGE SORT ITERATIVO
+// ==========================================
+
+static int comparar_agenda(const Local *a, const Local *b) {
+    int cmp_horario = strcmp(a->horario, b->horario);
+    if (cmp_horario != 0) {
+        return cmp_horario;
+    }
+    return strcmp(a->nome, b->nome);
+}
+
+static void merge_agenda(Local *locais, Local *temp, int inicio, int meio, int fim) {
+    int i = inicio;
+    int j = meio;
+    int k = inicio;
+
+    while (i < meio && j < fim) {
+        if (comparar_agenda(&locais[i], &locais[j]) <= 0) {
+            temp[k] = locais[i];
+            i++;
+        } else {
+            temp[k] = locais[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < meio) {
+        temp[k] = locais[i];
+        i++;
+        k++;
+    }
+    while (j < fim) {
+        temp[k] = locais[j];
+        j++;
+        k++;
+    }
+
+    for (int p = inicio; p < fim; p++) {
+        locais[p] = temp[p];
+    }
+}
+
+static int min_agenda(int a, int b) {
+    return (a < b) ? a : b;
+}
+
+void mergesort_agenda_iterativo(Local *locais, int total) {
+    Local *temp = (Local *)malloc(total * sizeof(Local));
+    if (temp == NULL) {
+        return;
+    }
+
+    for (int gap = 1; gap < total; gap *= 2) {
+        for (int inicio = 0; inicio < total; inicio += 2 * gap) {
+            int meio = min_agenda(inicio + gap, total);
+            int fim = min_agenda(inicio + 2 * gap, total);
+            merge_agenda(locais, temp, inicio, meio, fim);
+        }
+    }
+
+    free(temp);
 }
