@@ -126,61 +126,19 @@ static void quicksort_rec(
     quicksort_rec(locais, pivo + 1, fim, campo, crescente, comparacoes);
 }
 
-static int mergesort_mesclar(
-    Local *locais,
-    Local *temp,
-    size_t inicio,
-    size_t meio,
-    size_t fim,
-    OrdenacaoCampo campo,
-    int crescente,
-    unsigned long *comparacoes
-) {
-    size_t i = inicio;
-    size_t j = meio;
-    size_t k = inicio;
+/*MERGE SORT*/
 
-    while (i < meio && j < fim) {
-        if (comparar_para_ordem(&locais[i], &locais[j], campo, crescente, comparacoes) <= 0) {
-            temp[k++] = locais[i++];
-        } else {
-            temp[k++] = locais[j++];
-        }
+int comparar_agenda(const Local *a, const Local *b) {
+    //horários das duas salas
+    int compara_horario = strcmp(a->horario, b->horario);
+    // se horários diferentes, a decisão já está tomada
+    if (compara_horario != 0) {
+        return compara_horario;
     }
-
-    while (i < meio) {
-        temp[k++] = locais[i++];
-    }
-    while (j < fim) {
-        temp[k++] = locais[j++];
-    }
-
-    memcpy(&locais[inicio], &temp[inicio], (fim - inicio) * sizeof(Local));
-    return 0;
+    //se empatou no horário, vai pelo nome da sala
+    return strcmp(a->nome, b->nome);
 }
 
-static int mergesort_rec(
-    Local *locais,
-    Local *temp,
-    size_t inicio,
-    size_t fim,
-    OrdenacaoCampo campo,
-    int crescente,
-    unsigned long *comparacoes
-) {
-    if (fim - inicio <= 1) {
-        return 0;
-    }
-
-    size_t meio = inicio + (fim - inicio) / 2;
-    if (mergesort_rec(locais, temp, inicio, meio, campo, crescente, comparacoes) != 0) {
-        return -1;
-    }
-    if (mergesort_rec(locais, temp, meio, fim, campo, crescente, comparacoes) != 0) {
-        return -1;
-    }
-    return mergesort_mesclar(locais, temp, inicio, meio, fim, campo, crescente, comparacoes);
-}
 
 static void heapsort_heapify(
     Local *locais,
