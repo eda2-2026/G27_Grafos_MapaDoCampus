@@ -126,7 +126,7 @@ static void quicksort_rec(
     quicksort_rec(locais, pivo + 1, fim, campo, crescente, comparacoes);
 }
 
-/*MERGE SORT*/
+/*MERGE SORT------------------------------------------------*/
 
 int comparar_agenda(const Local *a, const Local *b) {
     //horários das duas salas
@@ -138,6 +138,44 @@ int comparar_agenda(const Local *a, const Local *b) {
     //se empatou no horário, vai pelo nome da sala
     return strcmp(a->nome, b->nome);
 }
+
+void merge_agenda(Local *locais, Local *temp, int inicio, int meio, int fim) {
+    int i = inicio; 
+    int j = meio;   
+    int k = inicio; 
+
+    
+    while (i < meio && j < fim) {
+
+        if (comparar_agenda(&locais[i], &locais[j]) <= 0) {
+            temp[k] = locais[i];
+            i++;
+        } else {
+            temp[k] = locais[j];
+            j++;
+        }
+        k++;
+    }
+    //sobrou esquerda
+    while (i < meio) {
+        temp[k] = locais[i];
+        i++;
+        k++;
+    }
+    //sobrou direita
+    while (j < fim) {
+        temp[k] = locais[j];
+        j++;
+        k++;
+    }
+
+    for (int p = inicio; p < fim; p++) {
+        locais[p] = temp[p];
+    }
+}
+
+
+
 
 
 static void heapsort_heapify(
