@@ -174,8 +174,33 @@ void merge_agenda(Local *locais, Local *temp, int inicio, int meio, int fim) {
     }
 }
 
+int min_agenda(int a, int b) {
+    return (a < b) ? a : b;
+}
 
+void mergesort_agenda_iterativo(Local *locais, int total) {
+    // 1. Alocando a "Mesa de Rascunho" UMA única vez
+    Local *temp = (Local *)malloc(total * sizeof(Local));
+    
+    if (temp == NULL) {
+        return; 
+    }
 
+    for (int gap = 1; gap < total; gap *= 2) {
+        
+        for (int inicio = 0; inicio < total; inicio += 2 * gap) {
+            
+            int meio = min_agenda(inicio + gap, total);
+            int fim = min_agenda(inicio + 2 * gap, total);
+            
+            merge_agenda(locais, temp, inicio, meio, fim);
+        }
+    }
+
+    free(temp);
+}
+
+/*FIM MERGE SORTO ------------------------------------------------------------------------------------------*/
 
 
 static void heapsort_heapify(
