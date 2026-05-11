@@ -1,4 +1,5 @@
 #include "ordenacao.h"
+#include "util.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -298,4 +299,126 @@ const char *ordenacao_nome_algoritmo(OrdenacaoAlgoritmo algoritmo) {
         default:
             return "quicksort";
     }
+}
+
+// ==========================================
+// MERGE SORT ITERATIVO
+// ==========================================
+
+static int comparar_agenda(const Local *a, const Local *b) {
+    int cmp_horario = strcmp(a->horario, b->horario);
+    if (cmp_horario != 0) {
+        return cmp_horario;
+    }
+    return strcmp(a->nome, b->nome);
+}
+
+static void merge_agenda(Local *locais, Local *temp, int inicio, int meio, int fim) {
+    int i = inicio;
+    int j = meio;
+    int k = inicio;
+
+    while (i < meio && j < fim) {
+        if (comparar_agenda(&locais[i], &locais[j]) <= 0) {
+            temp[k] = locais[i];
+            i++;
+        } else {
+            temp[k] = locais[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < meio) {
+        temp[k] = locais[i];
+        i++;
+        k++;
+    }
+    while (j < fim) {
+        temp[k] = locais[j];
+        j++;
+        k++;
+    }
+
+    for (int p = inicio; p < fim; p++) {
+        locais[p] = temp[p];
+    }
+}
+
+static int min_agenda(int a, int b) {
+    return (a < b) ? a : b;
+}
+
+void mergesort_agenda_iterativo(Local *locais, int total) {
+    Local *temp = (Local *)malloc(total * sizeof(Local));
+    if (temp == NULL) {
+        return;
+    }
+
+    for (int gap = 1; gap < total; gap *= 2) {
+        for (int inicio = 0; inicio < total; inicio += 2 * gap) {
+            int meio = min_agenda(inicio + gap, total);
+            int fim = min_agenda(inicio + 2 * gap, total);
+            merge_agenda(locais, temp, inicio, meio, fim);
+        }
+    }
+
+    free(temp);
+}
+
+//QUICK SORT - MINHA IMPLEMENTAÇÃO
+
+int calcular_relevancia(const Local *l, const FiltroLocal *f) {
+    int score = 0;
+
+    if (f->nome != NULL && strings_iguais_case_insensitive(l->nome, f->nome)) {
+        score += 50;
+    }
+    if (f->bloco != NULL && strings_iguais_case_insensitive(l->bloco, f->bloco)) {
+        score += 30;
+    }
+    if (f->materia != NULL && strings_iguais_case_insensitive(l->materia, f->materia)) {
+        score += 20;
+    }
+    if (f->horario != NULL && strings_iguais_case_insensitive(l->horario, f->horario)) {
+        score += 10;
+    }
+
+    return score;
+}
+
+static void trocar_relevancia(LocalRelevancia *a, LocalRelevancia *b) {
+    LocalRelevancia temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
+static int quicksort_particionar_relevancia(LocalRelevancia *vetor, int inicio, int fim) {
+    int pontuacao_pivo = vetor[fim].score;
+    int i = inicio - 1;
+
+    for (int j = inicio; j < fim; j++) {
+        if (vetor[j].score >= pontuacao_pivo) {
+            i++;
+            trocar_relevancia(&vetor[i], &vetor[j]);
+        }
+    }
+    
+    trocar_relevancia(&vetor[i + 1], &vetor[fim]);
+    return i + 1;
+}
+
+static void quicksort_rec_relevancia(LocalRelevancia *vetor, int inicio, int fim) {
+    if (inicio < fim) {
+        int indice_pivo = quicksort_particionar_relevancia(vetor, inicio, fim);
+        quicksort_rec_relevancia(vetor, inicio, indice_pivo - 1);
+        quicksort_rec_relevancia(vetor, indice_pivo + 1, fim);
+    }
+}
+
+void ordenar_por_relevancia(LocalRelevancia *vetor, int total) {
+    if (vetor == NULL || total < 2) {
+        return; 
+    }
+    quicksort_rec_relevancia(vetor, 0, total - 1);
 }

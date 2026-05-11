@@ -49,3 +49,34 @@ id;nome;bloco;andar;tipo;capacidade;tem_ar;responsavel;materia;horario
 49;Sala 212;UED;2;Sala de Professor;5;0;Daniel;-;08:00-18:00
 50;Sala 213;UED;2;Sala de Professor;5;1;Nilton;-;08:00-18:00
 51;Sala 214;UED;2;Sala de Professor;5;1;Maurício;-;08:00-18:00
+52;S1;UAC;2;Sala;120;1;Edson;EDA2;08:00-10:00
+53;S1;UAC;2;Sala;120;1;Edson;EDA2;10:00-12:00
+54;S2;UAC;2;Sala;120;1;Edson;Grafos;14:00-16:00
+55;I1;UAC;1;Sala;30;1;Edson;Grafos;16:00-18:00
+56;I2;UAC;1;Sala;35;1;Edson;EDA2;18:00-20:00
+57;Auditorio;UAC;1;Auditorio;200;1;Edson;Palestra;20:00-22:00
+58;I3;UAC;1;Sala;45;0;Rose;Matematica Discreta;08:00-10:00
+59;I3;UAC;1;Sala;45;0;Rose;Logica;10:00-12:00
+60;I4;UAC;1;Sala;50;1;Rose;Matematica Discreta;14:00-16:00
+61;I4;UAC;1;Sala;50;1;Rose;Logica;16:00-18:00
+62;S10;UAC;2;Laboratorio de computadores;150;0;Rose;Logica;18:00-20:00
+63;I9;UAC;1;Sala;125;0;Bruno;Algoritmos;08:00-10:00
+64;I9;UAC;1;Sala;125;0;Bruno;Algoritmos;10:00-12:00
+65;S3;UAC;2;Sala;45;1;Bruno;Estrutura de Dados;14:00-16:00
+66;S3;UAC;2;Sala;45;1;Bruno;Estrutura de Dados;16:00-18:00
+67;Auditorio;UAC;1;Auditorio;200;1;Bruno;Palestra;18:00-20:00
+68;I1;UAC;1;Sala;30;1;Cristiane;MD2;10:00-12:00
+69;I2;UAC;1;Sala;35;1;Cristiane;Requisitos;14:00-16:00
+70;I2;UAC;1;Sala;35;1;Cristiane;Requisitos;16:00-18:00
+71;I2;UAC;1;Sala;35;1;Daniel;MD2;08:00-10:00
+72;I1;UAC;1;Sala;30;1;Daniel;FSO;08:00-10:00
+73;I1;UAC;1;Sala;30;1;Nilton;MD2;14:00-16:00
+74;I3;UAC;1;Sala;45;0;Cristiane;MD2;08:00-10:00
+75;S1;UAC;2;Sala;120;1;Glauco;MD2;08:00-10:00
+76;S2;UAC;2;Sala;120;1;Rafael;Redes I;16:00-18:00
+77;S1;UAC;2;Sala;120;1;Rafael;Redes II;18:00-20:00
+78;S3;UAC;2;Sala;45;1;Fabricio;Redes I;14:00-16:00
+79;Auditorio;UAC;1;Auditorio;200;1;Daniel;Seminario;08:00-12:00
+80;Mocap;UED;1;Auditorio;100;1;Juliana;Evento;14:00-18:00
+81;I9;UAC;1;Sala;125;0;Aline;Maratona;14:00-18:00
+82;S1;UAC;2;Sala;120;1;Marcelo;Reuniao;14:00-16:00

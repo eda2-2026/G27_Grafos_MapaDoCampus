@@ -29,4 +29,14 @@ int ordenar_locais(
 const char *ordenacao_nome_campo(OrdenacaoCampo campo);
 const char *ordenacao_nome_algoritmo(OrdenacaoAlgoritmo algoritmo);
 
+void mergesort_agenda_iterativo(Local *locais, int total);
+
+typedef struct {
+    const Local *local;
+    int score;
+} LocalRelevancia;
+
+int calcular_relevancia(const Local *l, const FiltroLocal *f);
+void ordenar_por_relevancia(LocalRelevancia *vetor, int total);
+
 #endif
