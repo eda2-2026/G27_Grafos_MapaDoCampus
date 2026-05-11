@@ -40,6 +40,18 @@ O sistema também conta com um **roteador inteligente de ordenação**, selecion
 > Após uma busca com múltiplos filtros, os resultados são ordenados por "pontuação de relevância" (quanto mais campos coincidem — nome, bloco, horário — maior a pontuação). O Quick Sort é usado por ser o mais rápido na média para essa ordenação dinâmica.
 > **Tela:** Resultados da pesquisa com opção "Ordenar por relevância".
 
+### 📝 Nota de Arquitetura e Implementação
+
+> **Observação para a Avaliação:** > Para fins de organização do projeto, o arquivo `ordenacao.c` contém dois níveis de implementação:
+
+1. **Algoritmos Genéricos (Base):**
+   - As funções `mergesort_rec` e `quicksort_rec` localizadas no início do arquivo são implementações padrão utilizadas para a ordenação simples das colunas da API (ID, Nome e Capacidade).
+
+2. **Implementações Especializadas (Foco da Entrega):**
+   - As funções abaixo foram desenvolvidas especificamente para as regras de negócio deste trabalho, focando em performance e critérios complexos de ordenação:
+     - **Merge Sort Iterativo:** Versão *bottom-up* otimizada para garantir a estabilidade e a regra de cronologia da **Agenda do Professor**.
+     - **Quick Sort de Relevância:** Implementação customizada para ordenar a estrutura auxiliar `LocalRelevancia` por *Match Score*, permitindo um ranking de busca sem alterar o dataset original.
+
 ## Screenshots
 
 **1. Interface: Ranking de Maiores Salas com Heap Sort**
