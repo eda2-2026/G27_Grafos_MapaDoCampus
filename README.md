@@ -42,35 +42,35 @@ O sistema também conta com um **roteador inteligente de ordenação**, selecion
 
 ## Screenshots
 
-**1. Estrutura do Código: Insertion Sort**
-![Trecho do código mostrando a lógica do Insertion Sort](./docs/Print1-InsertionSort.PNG)
-
-**2. Estrutura do Código: Insertion Sort com Sentinela**
-![Trecho do código mostrando o uso do sentinela no Insertion Sort](./docs/Print2_sentinela.PNG)
-
-**3. Estrutura do Código: Heap Sort**
-![Trecho do código mostrando a lógica do Heap Sort](./docs/Print3_heapSort.PNG)
-
-**4. Estrutura do Código: Heapify**
-![Trecho do código mostrando a função Heapify do Heap Sort](./docs/Print4_heapSortHeapify.PNG)
-
-**5. Estrutura do Código: Merge Sort**
-![Trecho do código mostrando a lógica do Merge Sort](./docs/Print5_MergeSort.PNG)
-
-**6. Estrutura do Código: Quick Sort**
-![Trecho do código mostrando a lógica do Quick Sort](./docs/Print6_QuickSort.PNG)
-
-**7. Estrutura do Código: Ordenação por Relevância**
-![Trecho do código mostrando o cálculo de pontuação de relevância](./docs/Print7_Relevancia.PNG)
-
-**8. Interface: Ordenação por Relevância com Quick Sort**
-![Tela de resultados da busca com opção de ordenar por relevância](./docs/Print8_QuickSortTela.PNG)
-
-**9. Interface: Ranking de Maiores Salas com Heap Sort**
+**1. Interface: Ranking de Maiores Salas com Heap Sort**
 ![Tela da aba Ranking de Salas gerada pelo Heap Sort](./docs/Print9_HeapSortTela.PNG)
 
-**10. Interface: Agenda por Responsável com Merge Sort**
+**2. Interface: Agenda por Responsável com Merge Sort**
 ![Tela da agenda de uso por professor ordenada pelo Merge Sort](./docs/Print10_MergeSortTela.PNG)
+
+**3. Interface: Ordenação por Relevância com Quick Sort**
+![Tela de resultados da busca com opção de ordenar por relevância](./docs/Print8_QuickSortTela.PNG)
+
+**4. Estrutura do Código: Insertion Sort**
+![Trecho do código mostrando a lógica do Insertion Sort](./docs/Print1-InsertionSort.PNG)
+
+**5. Estrutura do Código: Insertion Sort com Sentinela**
+![Trecho do código mostrando o uso do sentinela no Insertion Sort](./docs/Print2_sentinela.PNG)
+
+**6. Estrutura do Código: Heap Sort**
+![Trecho do código mostrando a lógica do Heap Sort](./docs/Print3_heapSort.PNG)
+
+**7. Estrutura do Código: Heapify**
+![Trecho do código mostrando a função Heapify do Heap Sort](./docs/Print4_heapSortHeapify.PNG)
+
+**8. Estrutura do Código: Merge Sort**
+![Trecho do código mostrando a lógica do Merge Sort](./docs/Print5_MergeSort.PNG)
+
+**9. Estrutura do Código: Quick Sort**
+![Trecho do código mostrando a lógica do Quick Sort](./docs/Print6_QuickSort.PNG)
+
+**10. Estrutura do Código: Ordenação por Relevância**
+![Trecho do código mostrando o cálculo de pontuação de relevância](./docs/Print7_Relevancia.PNG)
 
 **11. Servidores em Execução (Estabilidade)**
 ![Terminais rodando o servidor Backend em C e o Frontend simultaneamente](./docs/Prin11_Terminais.PNG)
