@@ -36,4 +36,7 @@ typedef struct {
     int score;
 } LocalRelevancia;
 
+int calcular_relevancia(const Local *l, const FiltroLocal *f);
+void ordenar_por_relevancia(LocalRelevancia *vetor, int total);
+
 #endif
