@@ -52,12 +52,10 @@ function montarCardLocal(local) {
   const temAr = Number(local.temAr) === 1 ? "Sim" : "Nao";
   const responsavel = local.responsavel || local.professor || "-";
   
-  // ==========================================
+  
   // LÓGICA VISUAL DA RELEVÂNCIA (QUICK SORT)
-  // ==========================================
   let badgeRelevancia = "";
   if (local.score !== undefined) {
-    // Se a API devolveu um score, criamos uma etiqueta visual de destaque
     badgeRelevancia = `<div style="color: #d9534f; font-weight: bold; margin: 8px 0; padding: 4px 8px; background-color: #fdf0ef; border-radius: 6px; display: inline-block;">🔥 Match: ${local.score} pontos</div>`;
   }
 
