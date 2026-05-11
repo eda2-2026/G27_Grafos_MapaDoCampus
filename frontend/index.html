@@ -149,6 +149,21 @@
         <div id="listaRanking" class="lista-locais"></div>
       </div>
     </section>
+    <section class="card">
+      <h2>Agenda do Professor</h2>
+      <form id="formAgenda" class="grid form-grid">
+        <label for="aResponsavel">Nome do Professor/Responsavel</label>
+        <input id="aResponsavel" placeholder="Ex: Ana Silva" required />
+
+        <button type="submit" class="full">Ver agenda ordenada</button>
+      </form>
+
+      <div class="resultado-pesquisa">
+        <h3>Aulas da Agenda</h3>
+        <p id="statusAgenda" class="resultado-status">Digite o nome do professor para carregar a agenda.</p>
+        <div id="listaAgenda" class="lista-locais"></div>
+      </div>
+    </section>
   </main>
 
   <script src="script.js"></script>

@@ -17,6 +17,10 @@ const statusCadastro = document.getElementById("statusCadastro");
 const listaCadastrados = document.getElementById("listaCadastrados");
 const statusRanking = document.getElementById("statusRanking");
 const listaRanking = document.getElementById("listaRanking");
+//MERGE
+const formAgenda = document.getElementById("formAgenda");
+const statusAgenda = document.getElementById("statusAgenda");
+const listaAgenda = document.getElementById("listaAgenda");
 
 function setStatus(elemento, texto, erro = false) {
   elemento.textContent = texto;
@@ -269,9 +273,44 @@ formRanking.addEventListener("submit", async (event) => {
   }
 });
 
+async function carregarAgendaProfessor() {
+  const professorDigitado = document.getElementById("aResponsavel").value.trim();
+  
+  if (!professorDigitado) {
+    renderListaResultados(listaAgenda, [], "Digite o nome do professor.");
+    setStatus(statusAgenda, "O campo responsavel nao pode estar vazio.", true);
+    return;
+  }
+
+  const url = `${API_BASE}/api/agenda?responsavel=${encodeURIComponent(professorDigitado)}`;
+  const dados = await fetchJson(url);
+  
+  renderListaResultados(listaAgenda, dados.dados || [], "Nenhuma sala encontrada para este professor.");
+  
+  setStatus(
+    statusAgenda,
+    `Metodo usado: Merge Sort Iterativo | Aulas encontradas: ${dados.total ?? 0}`
+  );
+}
+
+formAgenda.addEventListener("submit", async (event) => {
+  event.preventDefault(); // Evita recarregar a pagina
+  setStatus(statusAgenda, "Carregando agenda com Merge Sort...");
+
+  try {
+    await carregarAgendaProfessor();
+  } catch (erro) {
+    setStatus(statusAgenda, `Falha ao carregar agenda: ${erro.message}`, true);
+    renderErroEmCard(listaAgenda, erro.message);
+  }
+});
+
+
+
 (async function iniciarTela() {
   renderListaResultados(listaPesquisa, [], "Digite ao menos um filtro para pesquisar.");
   renderListaResultados(listaRanking, [], "Clique em gerar ranking para ver as maiores salas.");
+  renderListaResultados(listaAgenda, [], "Aguardando busca pela agenda do professor.");
   try {
     await carregarLocaisCadastrados();
     await carregarRankingCapacidade();
