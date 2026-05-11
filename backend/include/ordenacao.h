@@ -31,4 +31,9 @@ const char *ordenacao_nome_algoritmo(OrdenacaoAlgoritmo algoritmo);
 
 void mergesort_agenda_iterativo(Local *locais, int total);
 
+typedef struct {
+    const Local *local;
+    int score;
+} LocalRelevancia;
+
 #endif
