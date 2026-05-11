@@ -51,12 +51,23 @@ function extrairNumeroSala(texto) {
 function montarCardLocal(local) {
   const temAr = Number(local.temAr) === 1 ? "Sim" : "Nao";
   const responsavel = local.responsavel || local.professor || "-";
+  
+  // ==========================================
+  // LÓGICA VISUAL DA RELEVÂNCIA (QUICK SORT)
+  // ==========================================
+  let badgeRelevancia = "";
+  if (local.score !== undefined) {
+    // Se a API devolveu um score, criamos uma etiqueta visual de destaque
+    badgeRelevancia = `<div style="color: #d9534f; font-weight: bold; margin: 8px 0; padding: 4px 8px; background-color: #fdf0ef; border-radius: 6px; display: inline-block;">🔥 Match: ${local.score} pontos</div>`;
+  }
+
   return `
     <article class="local-card">
       <header class="local-card-header">
         <h4>${escapeHtml(local.nome)}</h4>
         <span class="chip">Bloco ${escapeHtml(local.bloco)} - Andar ${escapeHtml(local.andar)}</span>
       </header>
+      ${badgeRelevancia}
       <p class="local-card-subtitle">${escapeHtml(local.tipo)} | Capacidade ${escapeHtml(local.capacidade)} | Ar: ${escapeHtml(temAr)}</p>
       <p class="local-card-meta">Materia: ${escapeHtml(local.materia)}</p>
       <p class="local-card-meta">Horario: ${escapeHtml(local.horario || "-")}</p>
