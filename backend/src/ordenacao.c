@@ -301,9 +301,9 @@ const char *ordenacao_nome_algoritmo(OrdenacaoAlgoritmo algoritmo) {
     }
 }
 
-// ==========================================
+
 // MERGE SORT ITERATIVO
-// ==========================================
+
 
 static int comparar_agenda(const Local *a, const Local *b) {
     int cmp_horario = strcmp(a->horario, b->horario);
@@ -366,7 +366,7 @@ void mergesort_agenda_iterativo(Local *locais, int total) {
     free(temp);
 }
 
-//QUICK SORT - MINHA IMPLEMENTAÇÃO
+//QUICK SORT - RELEVANCIA
 
 int calcular_relevancia(const Local *l, const FiltroLocal *f) {
     int score = 0;
