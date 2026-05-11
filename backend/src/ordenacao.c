@@ -1,4 +1,5 @@
 #include "ordenacao.h"
+#include "util.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -365,7 +366,7 @@ void mergesort_agenda_iterativo(Local *locais, int total) {
     free(temp);
 }
 
-//QUICK SORT
+//QUICK SORT - MINHA IMPLEMENTAÇÃO
 
 int calcular_relevancia(const Local *l, const FiltroLocal *f) {
     int score = 0;

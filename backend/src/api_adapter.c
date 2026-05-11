@@ -24,6 +24,7 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 #define DB_PATH "backend/data/locais.csv"
 
 static void responder_agenda(int client_fd, const char *professor);
+static void responder_busca_relevancia(int client_fd, const char *query);
 
 typedef struct {
     FiltroLocal filtro;
@@ -1422,6 +1423,67 @@ static void tratar_api_locais_post(int client_fd, const char *body) {
     enviar_resposta(client_fd, 201, "Created", "application/json; charset=utf-8", resposta);
 }
 
+//QUICK SORT - RELEVANCIA-------------------------------------------------------------
+static int json_append_relevancia(char *body, size_t capacidade, size_t *cursor, const LocalRelevancia *lr, int coma) {
+    char temp_json[4096];
+    size_t temp_cursor = 0;
+    if (json_append_local(temp_json, sizeof(temp_json), &temp_cursor, lr->local, 0) != 0) return -1;
+    temp_json[temp_cursor - 1] = '\0'; 
+    int n = snprintf(body + *cursor, capacidade - *cursor, "%s%s,\"score\":%d}", coma ? "," : "", temp_json, lr->score);
+    if (n < 0 || (size_t)n >= capacidade - *cursor) return -1;
+    *cursor += (size_t)n;
+    return 0;
+}
+
+static void responder_busca_relevancia(int client_fd, const char *query) {
+    FiltroMutavel dados_filtro;
+    filtro_resetar(&dados_filtro);
+    preencher_filtro_por_query(&dados_filtro, query);
+
+    if (!filtro_tem_algum_criterio_api(&dados_filtro)) {
+        responder_json_erro(client_fd, 400, "Informe filtros para a relevancia.");
+        return;
+    }
+
+    LocalRelevancia *vetor = (LocalRelevancia *)malloc(g_total_locais * sizeof(LocalRelevancia));
+    if (!vetor) {
+        responder_json_erro(client_fd, 500, "Erro de memoria.");
+        return;
+    }
+
+    int qtd = 0;
+    for (size_t i = 0; i < g_total_locais; i++) {
+        int score = calcular_relevancia(&g_locais[i], &dados_filtro.filtro);
+        if (score > 0) {
+            vetor[qtd].local = &g_locais[i];
+            vetor[qtd].score = score;
+            qtd++;
+        }
+    }
+
+    ordenar_por_relevancia(vetor, qtd);
+
+    char *json = (char *)malloc(RESP_BUF);
+    if (!json) {
+        free(vetor);
+        responder_json_erro(client_fd, 500, "Erro de memoria.");
+        return;
+    }
+
+    size_t cursor = 0;
+    cursor += snprintf(json + cursor, RESP_BUF - cursor, "{\"ok\":true,\"consulta\":\"relevancia\",\"metodoUsado\":\"Quick Sort (Match Score)\",\"total\":%d,\"locais\":[", qtd);
+
+    for (int i = 0; i < qtd; i++) {
+        json_append_relevancia(json, RESP_BUF, &cursor, &vetor[i], i > 0);
+    }
+    snprintf(json + cursor, RESP_BUF - cursor, "]}");
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", json);
+    free(json);
+    free(vetor);
+}
+//FIM QUICK SORT --------------
+
 static void tratar_conexao(int client_fd) {
     char req[REQ_BUF];
     ssize_t lidos = read(client_fd, req, sizeof(req) - 1);
@@ -1491,6 +1553,15 @@ static void tratar_conexao(int client_fd) {
         }
 
         const char *query = strchr(uri, '?');
+        //QUICK RELEVANCIA
+        char ordenar_por_check[32] = {0};
+        if (query != NULL && query_get_param(query + 1, "ordenarPor", ordenar_por_check, sizeof(ordenar_por_check)) == 0) {
+            if (strings_iguais_case_insensitive(ordenar_por_check, "relevancia")) {
+                responder_busca_relevancia(client_fd, query == NULL ? "" : query + 1);
+                return;
+            }
+        }
+
         FiltroMutavel dados_filtro;
         ConfigOrdenacao ordenacao;
         char erro_ordenacao[128] = {0};
