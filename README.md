@@ -1,7 +1,7 @@
 # Mapa de Campus
 
-Número da Lista: Trabalho 2 - Ordenação <br>
-Conteúdo da Disciplina: Algoritmos de Ordenação <br>
+Número da Lista: Trabalho 3 - Árvores <br>
+Conteúdo da Disciplina: Árvores Binárias de Busca Balanceadas <br>
 
 ## Alunas
 |Matrícula | Aluno |
