@@ -18,6 +18,8 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 #include "util.h"
 #include "busca_hash.h"
 #include "arvore_avl.h"
+#include "arvore_vp.h"
+
 
 #define CAPACIDADE_DATASET 1024
 #define REQ_BUF 16384
@@ -1483,16 +1485,57 @@ static int parse_local_from_form(const char *body, Local *local, char *erro, siz
 
 static void tratar_api_locais_post(int client_fd, const char *body) {
     if (g_total_locais >= CAPACIDADE_DATASET) {
-        responder_json_erro(client_fd, 500, "Capacidade maxima do banco atingida");
+        responder_json_erro(client_fd, 500, "Capacidade maxima atingida");
         return;
     }
 
     Local novo;
+    // A MÁGICA: Zera completamente a memória da struct para matar os "fantasmas"
+    memset(&novo, 0, sizeof(Local)); 
+    
     char erro[256] = {0};
     if (parse_local_from_form(body, &novo, erro, sizeof(erro)) != 0) {
         responder_json_erro(client_fd, 400, erro);
         return;
     }
+
+    // ÁRVORE VERMELHO-PRETA
+    inicializar_arvore_vp();
+
+    int novo_inicio, novo_fim;
+    if (converter_horario_em_minutos(novo.horario, &novo_inicio, &novo_fim) == 0) {
+        
+        NoVP *raiz_sala = T_nil;
+
+        for (size_t i = 0; i < g_total_locais; i++) {
+            if (strings_iguais_case_insensitive(g_locais[i].nome, novo.nome)) {
+                int ini_exist, fim_exist;
+                if (converter_horario_em_minutos(g_locais[i].horario, &ini_exist, &fim_exist) == 0) {
+                    NoVP *no = criar_no_vp(ini_exist, fim_exist, g_locais[i]);
+                    inserir_arvore_vp(&raiz_sala, no);
+                }
+            }
+        }
+
+        NoVP *conflito = buscar_conflito_vp(raiz_sala, novo_inicio, novo_fim);
+
+        if (conflito != NULL) {
+            char msg_erro[512];
+            snprintf(msg_erro, sizeof(msg_erro),
+                "Conflito de horario! A sala '%s' ja esta reservada para a materia '%s' (%s).",
+                novo.nome, conflito->local_dados.materia, conflito->local_dados.horario);
+
+            responder_json_erro(client_fd, 409, msg_erro);
+            
+            // Limpa a RAM antes de abortar
+            liberar_arvore_vp(raiz_sala); 
+            return; 
+        }
+        
+        // Se passou ileso (Aulas Coladas), limpa a RAM e segue para o cadastro
+        liberar_arvore_vp(raiz_sala);
+    }
+    //fim arvore vp
 
     unsigned long movimentacoes = 0;
     if (inserir_local_ordenado_por_id(

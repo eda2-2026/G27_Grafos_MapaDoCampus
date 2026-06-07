@@ -22,10 +22,12 @@ const listaRanking = document.getElementById("listaRanking");
 const formSugestaoAvl = document.getElementById("formSugestaoAvl");
 const statusSugestaoAvl = document.getElementById("statusSugestaoAvl");
 const listaSugestaoAvl = document.getElementById("listaSugestaoAvl");
+const alertaConflito = document.getElementById("alertaConflito");
 //MERGE
 const formAgenda = document.getElementById("formAgenda");
 const statusAgenda = document.getElementById("statusAgenda");
 const listaAgenda = document.getElementById("listaAgenda");
+
 
 function setStatus(elemento, texto, erro = false) {
   elemento.textContent = texto;
@@ -282,6 +284,9 @@ btnLimparPesquisa.addEventListener("click", () => {
 formCadastro.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  // Esconde o alerta de conflitos antes de uma nova tentativa
+  alertaConflito.classList.add("oculta");
+
   const payload = new URLSearchParams({
     id: document.getElementById("cId").value.trim(),
     nome: document.getElementById("cNome").value.trim(),
@@ -315,9 +320,18 @@ formCadastro.addEventListener("submit", async (event) => {
     );
     formCadastro.reset();
     await carregarLocaisCadastrados();
+    
   } catch (erro) {
-    setStatus(statusCadastro, `Falha ao cadastrar local: ${erro.message}`, true);
-    renderErroEmCard(listaCadastrados, erro.message);
+    // AQUI ESTÁ A INTEGRAÇÃO COM A ÁRVORE VERMELHO-PRETA
+    if (erro.message.includes("Conflito de horario")) {
+      alertaConflito.textContent = erro.message;
+      alertaConflito.classList.remove("oculta"); // Mostra a caixa piscando
+      setStatus(statusCadastro, "Erro: A Árvore Vermelho-Preta bloqueou o cadastro.", true);
+    } else {
+      // Erro padrão (ID duplicado, etc)
+      setStatus(statusCadastro, `Falha ao cadastrar local: ${erro.message}`, true);
+      renderErroEmCard(listaCadastrados, erro.message);
+    }
   }
 });
 
