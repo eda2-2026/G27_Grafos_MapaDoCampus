@@ -1381,19 +1381,21 @@ static int parse_local_from_form(const char *body, Local *local, char *erro, siz
 
 static void tratar_api_locais_post(int client_fd, const char *body) {
     if (g_total_locais >= CAPACIDADE_DATASET) {
-        responder_json_erro(client_fd, 500, "Capacidade maxima do banco atingida");
+        responder_json_erro(client_fd, 500, "Capacidade maxima atingida");
         return;
     }
 
     Local novo;
+    // A MÁGICA: Zera completamente a memória da struct para matar os "fantasmas"
+    memset(&novo, 0, sizeof(Local)); 
+    
     char erro[256] = {0};
     if (parse_local_from_form(body, &novo, erro, sizeof(erro)) != 0) {
         responder_json_erro(client_fd, 400, erro);
         return;
     }
 
-    //ÁRVORE VERMELHO-PRETA (DETECTOR DE CONFLITOS)
-   
+    // ÁRVORE VERMELHO-PRETA
     inicializar_arvore_vp();
 
     int novo_inicio, novo_fim;
@@ -1420,8 +1422,14 @@ static void tratar_api_locais_post(int client_fd, const char *body) {
                 novo.nome, conflito->local_dados.materia, conflito->local_dados.horario);
 
             responder_json_erro(client_fd, 409, msg_erro);
-            return;
+            
+            // Limpa a RAM antes de abortar
+            liberar_arvore_vp(raiz_sala); 
+            return; 
         }
+        
+        // Se passou ileso (Aulas Coladas), limpa a RAM e segue para o cadastro
+        liberar_arvore_vp(raiz_sala);
     }
     //fim arvore vp
 

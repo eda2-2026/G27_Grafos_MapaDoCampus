@@ -300,3 +300,12 @@ NoVP* buscar_no_exato_vp(NoVP *raiz, int inicio) {
     }
     return atual;
 }
+
+void liberar_arvore_vp(NoVP *raiz) {
+    if (raiz == T_nil || raiz == NULL) {
+        return;
+    }
+    liberar_arvore_vp(raiz->esq);
+    liberar_arvore_vp(raiz->dir);
+    free(raiz);
+}
