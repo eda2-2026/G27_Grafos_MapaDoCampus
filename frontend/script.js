@@ -261,6 +261,12 @@ formCadastro.addEventListener("submit", async (event) => {
       body: payload.toString(),
     });
 
+    alertaConflito.textContent = "✓ Horário verificado com sucesso pela Árvore Vermelho-Preta: Sem conflitos!";
+    alertaConflito.style.borderColor = "var(--accent)"; // Usa o verde do seu projeto
+    alertaConflito.style.color = "var(--accent)";
+    alertaConflito.style.backgroundColor = "var(--accent-soft)";
+    alertaConflito.classList.remove("oculta");
+
     const metodo = dados.metodoInsercao || "insertion_sort_id";
     const movimentacoes = dados.movimentacoes ?? "-";
     setStatus(

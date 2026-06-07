@@ -198,7 +198,9 @@ static void transplante_vp(NoVP **raiz, NoVP *u, NoVP *v) {
     if (u->pai == T_nil) *raiz = v;
     else if (u == u->pai->esq) u->pai->esq = v;
     else u->pai->dir = v;
-    v->pai = u->pai; 
+    if (v != T_nil) {
+        v->pai = u->pai; 
+    } 
 }
 
 static void conserta_remocao_vp(NoVP **raiz, NoVP *x) {
