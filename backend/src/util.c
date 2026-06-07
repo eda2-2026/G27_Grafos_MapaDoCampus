@@ -80,3 +80,20 @@ void imprimir_resultado(const ResultadoBusca *resultado, const Local *locais) {
     printf("Total encontrados: %zu\n", resultado->quantidade);
     printf("Comparacoes: %lu\n", resultado->comparacoes);
 }
+
+//ENTREGA 3 - ARVORE V-P
+int converter_horario_em_minutos(const char *horario_str, int *inicio_min, int *fim_min) {
+    if (horario_str == NULL || inicio_min == NULL || fim_min == NULL) {
+        return -1;
+    }
+
+    int h1, m1, h2, m2;
+    
+    if (sscanf(horario_str, "%d:%d-%d:%d", &h1, &m1, &h2, &m2) != 4) {
+        return -1; 
+    }
+    *inicio_min = (h1 * 60) + m1;
+    *fim_min = (h2 * 60) + m2;
+
+    return 0; 
+}
