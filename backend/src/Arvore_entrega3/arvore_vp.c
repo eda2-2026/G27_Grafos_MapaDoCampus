@@ -36,3 +36,53 @@ NoVP* criar_no_vp(int inicio, int fim, Local local) {
 
     return novo;
 }
+
+//ROTAÇÕES
+void rotacao_esquerda(NoVP **raiz, NoVP *x) {
+    NoVP *y = x->dir;
+    x->dir = y->esq;
+
+    if (y->esq != T_nil) {
+        y->esq->pai = x;
+    }
+
+    y->pai = x->pai;
+
+    if (x->pai == T_nil) {
+        *raiz = y;
+    } 
+    else if (x == x->pai->esq) {
+        x->pai->esq = y;
+    } 
+    else {
+        x->pai->dir = y;
+    }
+
+    y->esq = x;
+    x->pai = y;
+}
+
+void rotacao_direita(NoVP **raiz, NoVP *y) {
+    NoVP *x = y->esq;
+    y->esq = x->dir;
+
+    if (x->dir != T_nil) {
+        x->dir->pai = y;
+    }
+
+    x->pai = y->pai;
+
+    if (y->pai == T_nil) {
+        *raiz = x;
+    } 
+    else if (y == y->pai->dir) {
+        y->pai->dir = x;
+    } 
+    else {
+        y->pai->esq = x;
+    }
+
+    x->dir = y;
+    y->pai = x;
+}
+

@@ -25,4 +25,8 @@ extern NoVP *T_nil;
 void inicializar_arvore_vp(void);
 NoVP* criar_no_vp(int inicio, int fim, Local local);
 
+//rotações
+void rotacao_esquerda(NoVP **raiz, NoVP *x);
+void rotacao_direita(NoVP **raiz, NoVP *y);
+
 #endif
