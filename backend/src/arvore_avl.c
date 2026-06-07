@@ -4,7 +4,6 @@
 
 #include "util.h"
 
-// Lista encadeada usada para guardar varias salas com a mesma capacidade no mesmo no da AVL.
 typedef struct ListaIndiceAvl {
     size_t indice;
     struct ListaIndiceAvl *prox;
@@ -19,7 +18,6 @@ typedef struct NoAvlCapacidade {
     struct NoAvlCapacidade *direita;
 } NoAvlCapacidade;
 
-// Prepara o objeto de saida, evitando lixo de memoria nas metricas e nos totais.
 void resultado_avl_inicializar(ResultadoAvlCapacidade *resultado) {
     if (resultado == NULL) {
         return;
@@ -33,12 +31,10 @@ void resultado_avl_inicializar(ResultadoAvlCapacidade *resultado) {
     resultado->capacidade_encontrada = -1;
 }
 
-// Retorna o maior valor entre dois inteiros, usado no calculo da altura do no.
 static int maior(int a, int b) {
     return a > b ? a : b;
 }
 
-// Retorna altura 0 para no nulo, simplificando os calculos recursivos da AVL.
 static int altura_no(const NoAvlCapacidade *no) {
     return no == NULL ? 0 : no->altura;
 }
@@ -161,13 +157,11 @@ static NoAvlCapacidade *inserir_no_avl(
     }
 
     (*comparacoes)++;
-    // Decide o caminho da insercao como em uma arvore binaria de busca.
     if (capacidade < raiz->capacidade) {
         raiz->esquerda = inserir_no_avl(raiz->esquerda, capacidade, indice, comparacoes, rotacoes, erro);
     } else if (capacidade > raiz->capacidade) {
         raiz->direita = inserir_no_avl(raiz->direita, capacidade, indice, comparacoes, rotacoes, erro);
     } else {
-        // Se a capacidade ja existe, a sala entra na lista desse mesmo no.
         if (adicionar_indice_no(raiz, indice) != 0) {
             *erro = -1;
         }
@@ -180,26 +174,21 @@ static NoAvlCapacidade *inserir_no_avl(
 
     atualizar_altura(raiz);
 
-    // A AVL corrige qualquer diferenca de altura maior que 1 usando rotacoes.
     int balanceamento = fator_balanceamento(raiz);
 
-    // Caso esquerda-esquerda: uma rotacao simples para a direita resolve.
     if (balanceamento > 1 && capacidade < raiz->esquerda->capacidade) {
         return rotacao_direita(raiz, rotacoes);
     }
 
-    // Caso direita-direita: uma rotacao simples para a esquerda resolve.
     if (balanceamento < -1 && capacidade > raiz->direita->capacidade) {
         return rotacao_esquerda(raiz, rotacoes);
     }
 
-    // Caso esquerda-direita: primeiro gira o filho para a esquerda, depois a raiz para a direita.
     if (balanceamento > 1 && capacidade > raiz->esquerda->capacidade) {
         raiz->esquerda = rotacao_esquerda(raiz->esquerda, rotacoes);
         return rotacao_direita(raiz, rotacoes);
     }
 
-    // Caso direita-esquerda: primeiro gira o filho para a direita, depois a raiz para a esquerda.
     if (balanceamento < -1 && capacidade < raiz->direita->capacidade) {
         raiz->direita = rotacao_direita(raiz->direita, rotacoes);
         return rotacao_esquerda(raiz, rotacoes);
@@ -328,7 +317,6 @@ int avl_sugerir_por_capacidade(
     int erro = 0;
 
     for (size_t i = 0; i < total; i++) {
-        // Filtros como bloco, horario e ar-condicionado reduzem o conjunto antes da AVL.
         if (!local_passa_filtros_sem_capacidade(&locais[i], filtro)) {
             continue;
         }
@@ -351,7 +339,6 @@ int avl_sugerir_por_capacidade(
         resultado->total_indexados++;
     }
 
-    // Guarda a altura final para mostrar que a arvore permaneceu balanceada.
     resultado->altura_arvore = altura_no(raiz);
 
     // Busca a menor capacidade suficiente para a turma informada pelo usuario.
