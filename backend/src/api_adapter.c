@@ -17,6 +17,7 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 #include "dataset.h"
 #include "util.h"
 #include "busca_hash.h"
+#include "arvore_avl.h"
 
 #define CAPACIDADE_DATASET 1024
 #define REQ_BUF 16384
@@ -25,6 +26,7 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 
 static void responder_agenda(int client_fd, const char *professor);
 static void responder_busca_relevancia(int client_fd, const char *query);
+static void responder_sugestao_avl(int client_fd, const char *query);
 
 typedef struct {
     FiltroLocal filtro;
@@ -982,6 +984,108 @@ static void responder_ranking_capacidade(int client_fd, const char *query) {
     enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
 }
 
+// Endpoint da funcionalidade AVL: recebe filtros da URL, chama a arvore e devolve JSON.
+static void responder_sugestao_avl(int client_fd, const char *query) {
+    // Reaproveita a mesma estrutura de filtros das buscas existentes no projeto.
+    FiltroMutavel dados_filtro;
+    filtro_resetar(&dados_filtro);
+    preencher_filtro_por_query(&dados_filtro, query);
+
+    // Valida ID caso ele venha por engano na query; mantem o padrao das outras rotas.
+    if (dados_filtro.id_invalido) {
+        responder_json_erro(client_fd, 400, "Parametro id invalido");
+        return;
+    }
+
+    // A capacidade minima e obrigatoria, pois ela e a chave da busca lower bound na AVL.
+    if (dados_filtro.filtro.capacidade_minima < 0) {
+        responder_json_erro(client_fd, 400, "Informe capacidadeMin com inteiro >= 0");
+        return;
+    }
+
+    // Executa a regra principal: montar a AVL filtrada e procurar a menor capacidade suficiente.
+    ResultadoAvlCapacidade resultado;
+    if (avl_sugerir_por_capacidade(
+            g_locais,
+            g_total_locais,
+            &dados_filtro.filtro,
+            &resultado
+        ) != 0) {
+        responder_json_erro(client_fd, 500, "Falha ao consultar sugestao com AVL");
+        return;
+    }
+
+    // Inicia o JSON com identificacao do metodo e capacidade pedida pelo usuario.
+    char body[RESP_BUF];
+    size_t cursor = 0;
+    int n = snprintf(
+        body + cursor,
+        sizeof(body) - cursor,
+        "{\"ok\":true,\"consulta\":\"capacidadeMin\",\"metodoUsado\":\"arvore_avl_lower_bound(capacidade)\",\"capacidadeSolicitada\":%d,",
+        dados_filtro.filtro.capacidade_minima
+    );
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    // Escreve a capacidade ideal encontrada; null indica que nenhuma sala atende.
+    if (resultado.capacidade_encontrada >= 0) {
+        n = snprintf(
+            body + cursor,
+            sizeof(body) - cursor,
+            "\"capacidadeEncontrada\":%d,",
+            resultado.capacidade_encontrada
+        );
+    } else {
+        n = snprintf(body + cursor, sizeof(body) - cursor, "\"capacidadeEncontrada\":null,");
+    }
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    // Adiciona metricas da AVL para aparecerem na tela e ajudarem na explicacao.
+    n = snprintf(
+        body + cursor,
+        sizeof(body) - cursor,
+        "\"totalIndexados\":%zu,\"comparacoes\":%lu,\"rotacoes\":%lu,\"alturaArvore\":%d,\"total\":%zu,\"locais\":[",
+        resultado.total_indexados,
+        resultado.comparacoes,
+        resultado.rotacoes,
+        resultado.altura_arvore,
+        resultado.quantidade
+    );
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    // Converte os indices retornados pela AVL em objetos Local completos no JSON.
+    for (size_t i = 0; i < resultado.quantidade; i++) {
+        size_t idx = resultado.indices[i];
+        if (idx >= g_total_locais) {
+            continue;
+        }
+        if (json_append_local(body, sizeof(body), &cursor, &g_locais[idx], i > 0) != 0) {
+            responder_json_erro(client_fd, 500, "Resposta excedeu limite");
+            return;
+        }
+    }
+
+    // Fecha o array de locais e envia a resposta HTTP para o frontend.
+    n = snprintf(body + cursor, sizeof(body) - cursor, "]}");
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
+}
+
 static void adicionar_candidatos_de_resultado(
     const Local *locais,
     size_t total,
@@ -1510,7 +1614,7 @@ static void tratar_conexao(int client_fd) {
             200,
             "OK",
             "application/json; charset=utf-8",
-            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\",\"GET /api/ranking/capacidade\"]}"
+            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\",\"GET /api/ranking/capacidade\",\"GET /api/sugestao/avl\"]}"
         );
         return;
     }
@@ -1524,6 +1628,19 @@ static void tratar_conexao(int client_fd) {
 
         const char *query = strchr(uri, '?');
         responder_ranking_capacidade(client_fd, query == NULL ? "" : query + 1);
+        return;
+    }
+
+    // Rota da AVL: sugere a menor sala que atende a capacidade minima solicitada.
+    if (strncmp(uri, "/api/sugestao/avl", 17) == 0 &&
+        (uri[17] == '\0' || uri[17] == '?')) {
+        if (strcmp(metodo_http, "GET") != 0) {
+            responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
+            return;
+        }
+
+        const char *query = strchr(uri, '?');
+        responder_sugestao_avl(client_fd, query == NULL ? "" : query + 1);
         return;
     }
 

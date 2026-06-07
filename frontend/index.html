@@ -150,6 +150,40 @@
         <div id="listaRanking" class="lista-locais"></div>
       </div>
     </section>
+
+    <!-- Secao da funcionalidade AVL: recebe os criterios e mostra a melhor sala sugerida. -->
+    <section class="card">
+      <h2>Sugestao inteligente de sala</h2>
+
+      <!-- Formulario enviado pelo JavaScript para montar a query do endpoint /api/sugestao/avl. -->
+      <form id="formSugestaoAvl" class="grid form-grid">
+        <label for="sCapacidade">Quantidade de alunos</label>
+        <input id="sCapacidade" type="number" min="0" placeholder="Ex: 73" required />
+
+        <label for="sBloco">Bloco opcional</label>
+        <input id="sBloco" placeholder="Ex: UAC" />
+
+        <label for="sHorario">Horario opcional</label>
+        <input id="sHorario" placeholder="Ex: 08:00-10:00" />
+
+        <label for="sTemAr">Precisa de ar-condicionado?</label>
+        <select id="sTemAr">
+          <option value="">Qualquer</option>
+          <option value="1">Sim</option>
+          <option value="0">Nao</option>
+        </select>
+
+        <button type="submit" class="full">Sugerir sala (Arvore AVL)</button>
+      </form>
+
+      <!-- Area de retorno: exibe metricas da AVL e cards das salas com a capacidade ideal. -->
+      <div class="resultado-pesquisa">
+        <h3>Melhor encaixe por capacidade</h3>
+        <p id="statusSugestaoAvl" class="resultado-status">Informe a quantidade de alunos para receber uma sugestao.</p>
+        <div id="listaSugestaoAvl" class="lista-locais"></div>
+      </div>
+    </section>
+
     <section class="card">
       <h2>Agenda do Professor</h2>
       <form id="formAgenda" class="grid form-grid">

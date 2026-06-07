@@ -22,6 +22,9 @@ O sistema também conta com um **roteador inteligente de ordenação**, selecion
 * **Merge Sort:** Utilizado para ordenações estáveis por `nome` ou `horário`. Garante que registros com valores iguais mantenham a ordem original, sendo ideal para a agenda de um responsável.
 * **Heap Sort:** Alternativa de desempenho garantido O(n log n) para listas grandes. Usado como modo "robusto" no backend e para gerar o ranking das salas de maior capacidade.
 
+O projeto agora também possui uma funcionalidade baseada em **Árvore AVL**:
+* **Sugestão inteligente de sala:** O usuário informa a quantidade de alunos e filtros opcionais (`bloco`, `horário`, `temAr`). O backend cria uma AVL indexada por `capacidade` e faz uma busca do tipo *lower bound*, retornando a menor capacidade maior ou igual à solicitada. Isso permite encontrar o "melhor encaixe" de sala com árvore balanceada, mantendo inserções e busca em O(log n).
+
 ## Casos de Uso dos Algoritmos de Ordenação
 
 **1. Cadastro inteligente de local novo — Insertion Sort**
@@ -39,6 +42,10 @@ O sistema também conta com um **roteador inteligente de ordenação**, selecion
 **4. Resultados da busca por relevância — Quick Sort**
 > Após uma busca com múltiplos filtros, os resultados são ordenados por "pontuação de relevância" (quanto mais campos coincidem — nome, bloco, horário — maior a pontuação). O Quick Sort é usado por ser o mais rápido na média para essa ordenação dinâmica.
 > **Tela:** Resultados da pesquisa com opção "Ordenar por relevância".
+
+**5. Melhor sala para uma turma — Árvore AVL**
+> Ao informar a quantidade de alunos, o sistema indexa as salas por capacidade em uma AVL e procura a menor sala suficiente para a turma. Se várias salas têm a mesma capacidade ideal, todas são retornadas.
+> **Tela:** Seção "Sugestão inteligente de sala".
 
 ### 📝 Nota de Arquitetura e Implementação
 
@@ -120,6 +127,10 @@ Após rodar os dois comandos, abra o seu navegador e acesse: `http://localhost:5
   * Inserção inteligente por `id` usando lógica de **Insertion Sort com sentinela** (insere na posição correta sem reordenar a lista inteira).
 * `GET /api/ranking/capacidade`: Ranking de maiores salas por capacidade usando **Heap Sort**.
   * Parâmetro opcional: `top` (ex: `GET /api/ranking/capacidade?top=10`).
+* `GET /api/sugestao/avl`: Sugestão de sala por capacidade usando **Árvore AVL**.
+  * Parâmetro obrigatório: `capacidadeMin` (ex: `GET /api/sugestao/avl?capacidadeMin=73`).
+  * Parâmetros opcionais: `bloco`, `horario`, `temAr`, `andar`, `tipo`, `responsavel`, `materia`.
+  * A resposta inclui métricas úteis para apresentação: `comparacoes`, `rotacoes`, `alturaArvore`, `totalIndexados` e `capacidadeEncontrada`.
 
 *Exemplo de requisição de busca nativa via terminal (cURL):*
 ```bash
