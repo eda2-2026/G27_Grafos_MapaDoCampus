@@ -188,3 +188,115 @@ NoVP* buscar_conflito_vp(NoVP *raiz, int novo_inicio, int novo_fim) {
 
     return NULL; 
 }
+
+static NoVP* minimo_vp(NoVP *x) {
+    while (x->esq != T_nil) x = x->esq;
+    return x;
+}
+
+static void transplante_vp(NoVP **raiz, NoVP *u, NoVP *v) {
+    if (u->pai == T_nil) *raiz = v;
+    else if (u == u->pai->esq) u->pai->esq = v;
+    else u->pai->dir = v;
+    v->pai = u->pai; 
+}
+
+static void conserta_remocao_vp(NoVP **raiz, NoVP *x) {
+    while (x != *raiz && x->cor == PRETO) {
+        if (x == x->pai->esq) {
+            NoVP *irmao = x->pai->dir;
+            if (irmao->cor == VERMELHO) {
+                irmao->cor = PRETO;
+                x->pai->cor = VERMELHO;
+                rotacao_esquerda(raiz, x->pai);
+                irmao = x->pai->dir;
+            }
+            if (irmao->esq->cor == PRETO && irmao->dir->cor == PRETO) {
+                irmao->cor = VERMELHO;
+                x = x->pai;
+            } else {
+                if (irmao->dir->cor == PRETO) {
+                    irmao->esq->cor = PRETO;
+                    irmao->cor = VERMELHO;
+                    rotacao_direita(raiz, irmao);
+                    irmao = x->pai->dir;
+                }
+                irmao->cor = x->pai->cor;
+                x->pai->cor = PRETO;
+                irmao->dir->cor = PRETO;
+                rotacao_esquerda(raiz, x->pai);
+                x = *raiz;
+            }
+        } else {
+            NoVP *irmao = x->pai->esq;
+            if (irmao->cor == VERMELHO) {
+                irmao->cor = PRETO;
+                x->pai->cor = VERMELHO;
+                rotacao_direita(raiz, x->pai);
+                irmao = x->pai->esq;
+            }
+            if (irmao->dir->cor == PRETO && irmao->esq->cor == PRETO) {
+                irmao->cor = VERMELHO;
+                x = x->pai;
+            } else {
+                if (irmao->esq->cor == PRETO) {
+                    irmao->dir->cor = PRETO;
+                    irmao->cor = VERMELHO;
+                    rotacao_esquerda(raiz, irmao);
+                    irmao = x->pai->esq;
+                }
+                irmao->cor = x->pai->cor;
+                x->pai->cor = PRETO;
+                irmao->esq->cor = PRETO;
+                rotacao_direita(raiz, x->pai);
+                x = *raiz;
+            }
+        }
+    }
+    x->cor = PRETO;
+}
+
+void remover_arvore_vp(NoVP **raiz, NoVP *z) {
+    if (z == NULL || z == T_nil) return;
+
+    NoVP *y = z;
+    NoVP *x;
+    CorVP cor_original_y = y->cor;
+
+    if (z->esq == T_nil) {
+        x = z->dir;
+        transplante_vp(raiz, z, z->dir);
+    } else if (z->dir == T_nil) {
+        x = z->esq;
+        transplante_vp(raiz, z, z->esq);
+    } else {
+        y = minimo_vp(z->dir);
+        cor_original_y = y->cor;
+        x = y->dir;
+        if (y->pai == z) {
+            x->pai = y;
+        } else {
+            transplante_vp(raiz, y, y->dir);
+            y->dir = z->dir;
+            y->dir->pai = y;
+        }
+        transplante_vp(raiz, z, y);
+        y->esq = z->esq;
+        y->esq->pai = y;
+        y->cor = z->cor;
+    }
+
+    if (cor_original_y == PRETO) {
+        conserta_remocao_vp(raiz, x);
+    }
+    free(z);
+}
+
+NoVP* buscar_no_exato_vp(NoVP *raiz, int inicio) {
+    NoVP *atual = raiz;
+    while (atual != T_nil && inicio != atual->inicio_minutos) {
+        if (inicio < atual->inicio_minutos) atual = atual->esq;
+        else atual = atual->dir;
+    }
+    return atual;
+}

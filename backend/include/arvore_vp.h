@@ -33,4 +33,7 @@ void inserir_arvore_vp(NoVP **raiz, NoVP *novo_no);
 
 NoVP* buscar_conflito_vp(NoVP *raiz, int novo_inicio, int novo_fim);
 
+NoVP* buscar_no_exato_vp(NoVP *raiz, int inicio);
+void remover_arvore_vp(NoVP **raiz, NoVP *z);
+
 #endif
