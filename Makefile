@@ -10,6 +10,7 @@ API_PORT := 8091
 TARGET := bin/campus_busca
 TARGET_API := bin/campus_api
 
+# Fontes compartilhadas pelos binarios; inclui arvore_avl.c para a sugestao inteligente.
 SRC_COMMON := \
 	backend/src/dataset.c \
 	backend/src/util.c \
@@ -17,7 +18,8 @@ SRC_COMMON := \
 	backend/src/busca_binaria.c \
 	backend/src/busca_indexada.c \
 	backend/src/busca_hash.c \
-	backend/src/busca_interpolacao.c \
+	backend/src/arvore_avl.c \
+	backend/src/busca_interpolacao.c
 	backend/src/Arvore_entrega3/arvore_vp.c
 
 MAIN_SRC := backend/src/main.c
