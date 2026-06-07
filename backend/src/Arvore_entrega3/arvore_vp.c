@@ -86,3 +86,105 @@ void rotacao_direita(NoVP **raiz, NoVP *y) {
     y->pai = x;
 }
 
+//INSERÇÃO
+static void conserta_insercao_vp(NoVP **raiz, NoVP *z) {
+    while (z->pai->cor == VERMELHO) {
+        
+        // LADO ESQUERDO
+        if (z->pai == z->pai->pai->esq) {
+            NoVP *tio = z->pai->pai->dir;
+            
+            // CASO 3: O tio é VERMELHO
+            if (tio->cor == VERMELHO) {
+                z->pai->cor = PRETO;        // Pai fica preto
+                tio->cor = PRETO;           // Tio fica preto
+                z->pai->pai->cor = VERMELHO;// Avô fica vermelho
+                z = z->pai->pai;            // Subimos o 'z' para o avô e o laço repete
+            } 
+            // CASO 4 e 5: O tio é PRETO
+            else {
+                // CASO 2: 'z' forma um "triângulo" (filho à direita)
+                if (z == z->pai->dir) {
+                    z = z->pai;
+                    rotacao_esquerda(raiz, z); // Transforma num Caso 3 (linha reta)
+                }
+                
+                // CASO 3: 'z' forma uma "linha reta" (filho à esquerda)
+                z->pai->cor = PRETO;
+                z->pai->pai->cor = VERMELHO;
+                rotacao_direita(raiz, z->pai->pai);
+            }
+        } 
+        // LADO DIREITO
+        else {
+            NoVP *tio = z->pai->pai->esq;
+            
+            if (tio->cor == VERMELHO) { //Caso 3 simétrico
+                z->pai->cor = PRETO;
+                tio->cor = PRETO;
+                z->pai->pai->cor = VERMELHO;
+                z = z->pai->pai;
+            } else {
+                if (z == z->pai->esq) { //Caso 4 simétrico
+                    z = z->pai;
+                    rotacao_direita(raiz, z);
+                }
+                //Caso 5 simétrico
+                z->pai->cor = PRETO;
+                z->pai->pai->cor = VERMELHO;
+                rotacao_esquerda(raiz, z->pai->pai);
+            }
+        }
+    }
+    //RAIZ PRETA SEMPRE
+    (*raiz)->cor = PRETO;
+}
+
+void inserir_arvore_vp(NoVP **raiz, NoVP *z) {
+    NoVP *y = T_nil;   //y pai do novo nó
+    NoVP *x = *raiz;   //x desce pela árvore
+
+    //Descida Árvore Binária de Busca (O(log n))
+    while (x != T_nil) {
+        y = x;
+        //comparacao
+        if (z->inicio_minutos < x->inicio_minutos) {
+            x = x->esq;
+        } else {
+            x = x->dir;
+        }
+    }
+
+    z->pai = y;
+    if (y == T_nil) {
+        *raiz = z; //Se árvore vazia, ele é nova raiz
+    } else if (z->inicio_minutos < y->inicio_minutos) {
+        y->esq = z;
+    } else {
+        y->dir = z;
+    }
+
+    z->esq = T_nil;
+    z->dir = T_nil;
+    z->cor = VERMELHO;
+
+    conserta_insercao_vp(raiz, z);
+}
+
+NoVP* buscar_conflito_vp(NoVP *raiz, int novo_inicio, int novo_fim) {
+    NoVP *atual = raiz;
+
+    while (atual != T_nil) {
+        if (novo_inicio < atual->fim_minutos && novo_fim > atual->inicio_minutos) {
+            return atual; 
+        }
+
+        if (novo_inicio < atual->inicio_minutos) {
+            atual = atual->esq;
+        } else {
+            atual = atual->dir;
+        }
+    }
+
+    return NULL; 
+}

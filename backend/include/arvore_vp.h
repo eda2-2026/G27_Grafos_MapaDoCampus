@@ -29,4 +29,8 @@ NoVP* criar_no_vp(int inicio, int fim, Local local);
 void rotacao_esquerda(NoVP **raiz, NoVP *x);
 void rotacao_direita(NoVP **raiz, NoVP *y);
 
+void inserir_arvore_vp(NoVP **raiz, NoVP *novo_no);
+
+NoVP* buscar_conflito_vp(NoVP *raiz, int novo_inicio, int novo_fim);
+
 #endif
