@@ -9,90 +9,79 @@ Conteúdo da Disciplina: Árvores Binárias de Busca Balanceadas <br>
 | 231035722  | Marina Agostini Galdi |
 | 241036142  | Júlia Gabriella Ferreira Siqueira |
 
-## Sobre 
-O **Mapa de Campus** é um serviço projetado para gerenciar e consultar o catálogo de locais de um campus universitário (salas, laboratórios, auditórios, etc.). O principal objetivo deste projeto é aplicar estruturas de dados de alto desempenho na prática, conectando um backend nativo em C a uma interface Web de pesquisas e filtros.
+## Sobre
+O **Mapa de Campus** é um serviço projetado para gerenciar e consultar o catálogo de locais de um campus universitário (salas, laboratórios, auditórios, etc.). O principal objetivo deste projeto é aplicar estruturas de dados de alto desempenho na prática, conectando um backend nativo em C a uma interface Web de pesquisas, filtros e cadastros dinâmicos.
 
-O sistema atua como uma central inteligente de roteamento de buscas:
-* **Buscas Numéricas e Textuais secundárias (ID, Capacidade, Andar, etc.):** Utilizam a combinação de Busca Binária, Busca Sequencial Indexada e Busca por Interpolação, isolando blocos de memória para reduzir as varreduras.
-* **Busca Textual Primária (Nome do local):** É interceptada por uma **Tabela de Espalhamento (Hash)**. Utilizando a matemática do Método da Divisão para o cálculo de índices e Listas Encadeadas para o tratamento de colisões (Hashing Estático Aberto), o sistema garante tempo de recuperação constante O(1) e acesso direto à memória.
+Nesta **Entrega 3**, o sistema evoluiu para incorporar o poder das **Árvores Binárias de Busca Balanceadas**, garantindo tempo de resposta logarítmico O(log n) para operações críticas de negócio. O projeto agora possui duas funcionalidades centrais baseadas nessas estruturas:
 
-O sistema também conta com um **roteador inteligente de ordenação**, selecionando automaticamente o algoritmo mais adequado para cada situação:
-* **Insertion Sort:** Utilizado no cadastro de novos locais. Em vez de reordenar a lista inteira, o novo registro é encaixado diretamente na posição correta por `id`, usando lógica de sentinela para maior eficiência.
-* **Quick Sort:** Algoritmo padrão para ordenação dos resultados de busca na tela. Ideal para listas maiores quando o usuário ordena por `capacidade`, `id` ou `relevância`.
-* **Merge Sort:** Utilizado para ordenações estáveis por `nome` ou `horário`. Garante que registros com valores iguais mantenham a ordem original, sendo ideal para a agenda de um responsável.
-* **Heap Sort:** Alternativa de desempenho garantido O(n log n) para listas grandes. Usado como modo "robusto" no backend e para gerar o ranking das salas de maior capacidade.
+- **Sugestão Inteligente de Sala (Árvore AVL — Marina):** O usuário informa a quantidade de alunos e filtros opcionais (`bloco`, `horário`, `temAr`). O backend monta dinamicamente uma Árvore AVL indexada por capacidade. Através de uma busca do tipo *lower bound*, o sistema navega na árvore balanceada para retornar a menor capacidade maior ou igual à solicitada (estratégia *best fit*). Cada nó da AVL gerencia uma lista interna de salas com a mesma capacidade.
 
-O projeto agora também possui uma funcionalidade baseada em **Árvore AVL**:
-* **Sugestão inteligente de sala:** O usuário informa a quantidade de alunos e filtros opcionais (`bloco`, `horário`, `temAr`). O backend cria uma AVL indexada por `capacidade` e faz uma busca do tipo *lower bound*, retornando a menor capacidade maior ou igual à solicitada. Isso permite encontrar o "melhor encaixe" de sala com árvore balanceada, mantendo inserções e busca em O(log n).
+- **Validador Dinâmico de Conflitos (Árvore Vermelho-Preta — Júlia):** O sistema impede o agendamento duplo de salas. Ao tentar cadastrar uma nova aula, o backend constrói uma Árvore Vermelho-Preta na memória RAM contendo todas as aulas daquela sala específica, indexadas em minutos. A árvore atua como uma barreira geométrica de tempo:
+  - **Inserção Segura:** Se os horários se sobrepõem, a árvore bloqueia o cadastro e emite um alerta vermelho indicando a aula conflitante. Aulas estritamente "coladas" são permitidas pela matemática da árvore.
+  - **Remoção e Duplo Preto:** O sistema permite a exclusão de agendamentos. Ao deletar uma aula, o motor da Árvore Vermelho-Preta identifica se o nó era preto e aciona as rotações de reequilíbrio (Casos do Duplo Preto) diretamente no servidor, atualizando o arquivo CSV em seguida.
 
-## Casos de Uso dos Algoritmos de Ordenação
+O projeto também mantém as otimizações das entregas anteriores, atuando como um roteador inteligente:
+- **Buscas (O(1) a O(log n)):** Tabela Hash para nomes exatos, Busca Binária, Sequencial Indexada e Interpolação para dados numéricos.
+- **Ordenação Dinâmica:** Heap Sort (ranking de capacidade), Merge Sort (agenda estável do professor), Quick Sort (busca por relevância) e Insertion Sort com sentinela (cadastro físico).
 
-**1. Cadastro inteligente de local novo — Insertion Sort**
-> Ao cadastrar uma nova sala, ela já entra na posição correta na lista ordenada por `id`, sem reordenar a lista inteira.
-> **Tela:** Seção "Locais Cadastrados".
+## Casos de Uso das Árvores Balanceadas
 
-**2. Top salas para turma grande — Heap Sort**
-> O botão "Top 10 maiores capacidades" gera um ranking das salas com maior lotação usando Heap Sort, com desempenho garantido mesmo para grandes volumes de dados.
-> **Tela:** Aba "Ranking de Salas".
-
-**3. Agenda de uso por professor — Merge Sort**
-> Ao filtrar por "Responsável" e clicar em "Ver agenda ordenada", as aulas são listadas por horário com ordenação estável — em caso de empate, a ordem por nome/sala é preservada.
-> **Tela:** Filtro "Responsável" + botão "Ver agenda ordenada".
-
-**4. Resultados da busca por relevância — Quick Sort**
-> Após uma busca com múltiplos filtros, os resultados são ordenados por "pontuação de relevância" (quanto mais campos coincidem — nome, bloco, horário — maior a pontuação). O Quick Sort é usado por ser o mais rápido na média para essa ordenação dinâmica.
-> **Tela:** Resultados da pesquisa com opção "Ordenar por relevância".
-
-**5. Melhor sala para uma turma — Árvore AVL**
-> Ao informar a quantidade de alunos, o sistema indexa as salas por capacidade em uma AVL e procura a menor sala suficiente para a turma. Se várias salas têm a mesma capacidade ideal, todas são retornadas.
+**1. Melhor sala para uma turma (Best Fit) — Árvore AVL**
+> Ao informar a quantidade de alunos, o sistema indexa as salas por capacidade em uma AVL e procura o "encaixe perfeito". Se a turma tem 35 alunos, a árvore não varre o banco todo; ela desce os galhos e retorna as salas de capacidade 35 ou a mais próxima superior (ex: 40).
 > **Tela:** Seção "Sugestão inteligente de sala".
+
+**2. Prevenção de Conflito de Horário — Árvore Vermelho-Preta**
+> Ao tentar cadastrar uma nova sala/aula, a Árvore VP mapeia o tempo. Se você tenta marcar MD2 das 08h às 10h na Sala I1, mas já existe Algoritmos nesse horário, a tela emite um alerta vermelho imediato e bloqueia o banco de dados.
+> **Tela:** Formulário "Cadastro de Local" → Disparo do Alerta.
+
+**3. Exclusão e Reequilíbrio (Duplo Preto) — Árvore Vermelho-Preta**
+> Cada sala listada possui um botão "Excluir Agendamento". Ao confirmar a exclusão, a requisição DELETE aciona o backend em C. O nó correspondente é retirado da Árvore Vermelho-Preta. Se o nó for Preto, o sistema executa as rotações para reequilibrar a altura negra da árvore de forma invisível para o usuário, mas visível nos logs do servidor.
+> **Tela:** Botão "🗑️ Excluir Agendamento" nos cards de locais.
 
 ### 📝 Nota de Arquitetura e Implementação
 
-> **Observação para a Avaliação:** > Para fins de organização do projeto, o arquivo `ordenacao.c` contém dois níveis de implementação:
-
-1. **Algoritmos Genéricos (Base):**
-   - As funções `mergesort_rec` e `quicksort_rec` localizadas no início do arquivo são implementações padrão utilizadas para a ordenação simples das colunas da API (ID, Nome e Capacidade).
-
-2. **Implementações Especializadas (Foco da Entrega):**
-   - As funções abaixo foram desenvolvidas especificamente para as regras de negócio deste trabalho, focando em performance e critérios complexos de ordenação:
-     - **Merge Sort Iterativo:** Versão *bottom-up* otimizada para garantir a estabilidade e a regra de cronologia da **Agenda do Professor**.
-     - **Quick Sort de Relevância:** Implementação customizada para ordenar a estrutura auxiliar `LocalRelevancia` por *Match Score*, permitindo um ranking de busca sem alterar o dataset original.
+> **Observação para a Avaliação:** Para fins de organização, as lógicas das árvores foram estritamente modularizadas:
+>
+> - `arvore_avl.c` / `arvore_avl.h`: Contém a lógica de rotações por Fator de Balanceamento e a busca otimizada *lower bound* para a sugestão de capacidades.
+> - `arvore_vp.c` / `arvore_vp.h`: Contém o motor do nó sentinela (`T_nil`), o reequilíbrio por cores (Tio Vermelho/Preto na inserção) e a resolução do complexo caso do Duplo Preto na remoção de agendamentos.
 
 ## Screenshots
 
-**1. Interface: Ranking de Maiores Salas com Heap Sort**
-![Tela da aba Ranking de Salas gerada pelo Heap Sort](./docs/Print9_HeapSortTela.PNG)
+**1. Interface: Sugestão Inteligente de Sala (Árvore AVL)**
+![Tela da seção de sugestão inteligente de sala com resultados da AVL](./docs/Print1-SugestaoSala_AVL.PNG)
 
-**2. Interface: Agenda por Responsável com Merge Sort**
-![Tela da agenda de uso por professor ordenada pelo Merge Sort](./docs/Print10_MergeSortTela.PNG)
+**2. Interface: Conflito de Horário Detectado (Árvore Vermelho-Preta)**
+![Alerta vermelho de conflito de horário emitido pela Árvore VP](./docs/Print2_Conflito_Arvorevp.PNG)
 
-**3. Interface: Ordenação por Relevância com Quick Sort**
-![Tela de resultados da busca com opção de ordenar por relevância](./docs/Print8_QuickSortTela.PNG)
+**3. Interface: Cadastro sem Conflito (Árvore Vermelho-Preta)**
+![Confirmação verde de horário verificado com sucesso pela Árvore VP](./docs/Print3_SemConflito_Arvorevp.PNG)
 
-**4. Estrutura do Código: Insertion Sort**
-![Trecho do código mostrando a lógica do Insertion Sort](./docs/Print1-InsertionSort.PNG)
+**4. Interface: Campo para Excluir Agendamento**
+![Cards de locais cadastrados com botão de excluir agendamento](./docs/Print4_CampoParaExcluirAgendamento.PNG)
 
-**5. Estrutura do Código: Insertion Sort com Sentinela**
-![Trecho do código mostrando o uso do sentinela no Insertion Sort](./docs/Print2_sentinela.PNG)
+**5. Estrutura do Código: Nó AVL e Inicialização do Resultado**
+![Trecho do código mostrando a struct NoAvlCapacidade e a função resultado_avl_inicializar](./docs/Print5_noAvlCapacidade.PNG)
 
-**6. Estrutura do Código: Heap Sort**
-![Trecho do código mostrando a lógica do Heap Sort](./docs/Print3_heapSort.PNG)
+**6. Estrutura do Código: Filtro da Busca Inteligente AVL**
+![Trecho do código mostrando a função local_passa_filtros_sem_capacidade](./docs/Print6_filtroBuscaIntelienteAVL.PNG)
 
-**7. Estrutura do Código: Heapify**
-![Trecho do código mostrando a função Heapify do Heap Sort](./docs/Print4_heapSortHeapify.PNG)
+**7. Estrutura do Código: Rotação Direita da AVL**
+![Trecho do código mostrando a função rotacao_direita da AVL](./docs/Print7_rotacaoDireitaAVL.PNG)
 
-**8. Estrutura do Código: Merge Sort**
-![Trecho do código mostrando a lógica do Merge Sort](./docs/Print5_MergeSort.PNG)
+**8. Estrutura do Código: Inicialização da Árvore Vermelho-Preta**
+![Trecho do código mostrando a função inicializar_arvore_vp e o nó sentinela T_nil](./docs/Print8_inicializaArvoreVP.PNG)
 
-**9. Estrutura do Código: Quick Sort**
-![Trecho do código mostrando a lógica do Quick Sort](./docs/Print6_QuickSort.PNG)
+**9. Estrutura do Código: Conserta Inserção VP**
+![Trecho do código mostrando a função conserta_insercao_vp com os casos de tio vermelho e preto](./docs/Print9_consertaInsercaoVP.PNG)
 
-**10. Estrutura do Código: Ordenação por Relevância**
-![Trecho do código mostrando o cálculo de pontuação de relevância](./docs/Print7_Relevancia.PNG)
+**10. Estrutura do Código: Inserção na Árvore VP**
+![Trecho do código mostrando a função inserir_arvore_vp](./docs/Print10_insereVP.PNG)
 
-**11. Servidores em Execução (Estabilidade)**
-![Terminais rodando o servidor Backend em C e o Frontend simultaneamente](./docs/Prin11_Terminais.PNG)
+**11. Estrutura do Código: Conserta Remoção VP (Duplo Preto)**
+![Trecho do código mostrando a função conserta_remocao_vp com os casos do Duplo Preto](./docs/Print11_consertaRemocaoVP.PNG)
+
+**12. Servidores em Execução (Estabilidade)**
+![Terminais rodando o servidor Backend em C e o Frontend simultaneamente](./docs/Print12_Terminais.PNG)
 
 ## Instalação 
 Linguagem: C (Backend) e HTML/JS/CSS (Frontend)<br>
@@ -120,17 +109,17 @@ python3 -m http.server 5500
 Após rodar os dois comandos, abra o seu navegador e acesse: `http://localhost:5500`.
 
 **Documentação da API Disponível:**
-* `GET /api/busca`: Busca com filtros (ex: `id`, `nome`, `bloco`, `andar`, `tipo`, `responsavel`, `materia`, `horario`, `temAr`, `capacidadeMin`). O sistema decide automaticamente qual algoritmo (Binária, Interpolada, Indexada ou Hash) utilizar com base no parâmetro fornecido.
-  * Ordenação opcional dos resultados: `ordenarPor=id|nome|capacidade|relevancia`, `algoritmoOrdenacao=quicksort|mergesort|heapsort|insertionsort`, `ordem=asc|desc`.
+* `GET /api/busca`: Busca com filtros (ex: `id`, `nome`, `bloco`, `andar`, `tipo`, `responsavel`, `materia`, `horario`, `temAr`, `capacidadeMin`). O sistema decide automaticamente qual algoritmo utilizar com base no parâmetro fornecido.
+  * Ordenação opcional: `ordenarPor=id|nome|capacidade|relevancia`, `algoritmoOrdenacao=quicksort|mergesort|heapsort|insertionsort`, `ordem=asc|desc`.
 * `GET /api/locais`: Lista todos os locais cadastrados (também aceita os parâmetros de ordenação opcionais).
-* `POST /api/locais`: Cadastro de novo local (form urlencoded) com os campos obrigatórios: `id`, `nome`, `bloco`, `andar`, `tipo`, `capacidade`, `temAr`, `responsavel`, `materia`, `horario`.
-  * Inserção inteligente por `id` usando lógica de **Insertion Sort com sentinela** (insere na posição correta sem reordenar a lista inteira).
+* `POST /api/locais`: Cadastro de novo local (form urlencoded). Antes de inserir, o backend constrói uma **Árvore Vermelho-Preta** com os agendamentos existentes da sala e valida se há conflito de horário.
+* `DELETE /api/locais/:id`: Exclusão de agendamento. O motor da **Árvore Vermelho-Preta** executa as rotações de Duplo Preto se necessário e atualiza o CSV.
 * `GET /api/ranking/capacidade`: Ranking de maiores salas por capacidade usando **Heap Sort**.
   * Parâmetro opcional: `top` (ex: `GET /api/ranking/capacidade?top=10`).
 * `GET /api/sugestao/avl`: Sugestão de sala por capacidade usando **Árvore AVL**.
   * Parâmetro obrigatório: `capacidadeMin` (ex: `GET /api/sugestao/avl?capacidadeMin=73`).
   * Parâmetros opcionais: `bloco`, `horario`, `temAr`, `andar`, `tipo`, `responsavel`, `materia`.
-  * A resposta inclui métricas úteis para apresentação: `comparacoes`, `rotacoes`, `alturaArvore`, `totalIndexados` e `capacidadeEncontrada`.
+  * A resposta inclui métricas: `comparacoes`, `rotacoes`, `alturaArvore`, `totalIndexados` e `capacidadeEncontrada`.
 
 *Exemplo de requisição de busca nativa via terminal (cURL):*
 ```bash
@@ -146,12 +135,12 @@ curl "http://localhost:8091/api/busca?bloco=UAC&capacidadeMin=40"
 * `docs`: Setup e organização da equipe (veja o guia completo em [docs/SETUP.md](docs/SETUP.md)).
 
 **Destaques da Arquitetura:**
-* **Modularidade:** O código-fonte foi estruturado separando a lógica matemática dos algoritmos de busca e ordenação da infraestrutura de rede HTTP (endpoints).
-* **Roteamento de Ordenação:** O sistema seleciona automaticamente o algoritmo mais adequado conforme o contexto — Insertion Sort para inserção pontual, Quick Sort para buscas gerais, Merge Sort para ordenações estáveis e Heap Sort para rankings e volumes grandes.
-* **Case-Insensitive Search na Hash:** A implementação da Tabela Hash conta com otimização de varredura caractere por caractere (conversão para *lowercase* em tempo de execução), permitindo encontrar locais independentemente da formatação textual da query, protegendo a integridade dos dados no banco.
-
+* **Modularidade:** As lógicas da AVL e da Árvore Vermelho-Preta foram isoladas em módulos próprios (`arvore_avl.c` e `arvore_vp.c`), separados da infraestrutura HTTP.
+* **Roteamento de Ordenação:** Insertion Sort para inserção pontual, Quick Sort para buscas gerais, Merge Sort para ordenações estáveis e Heap Sort para rankings.
+* **Roteamento de Busca:** O sistema seleciona automaticamente entre Tabela Hash, Busca Binária, Busca por Interpolação e Busca Sequencial Indexada conforme o parâmetro recebido.
+* **Case-Insensitive Search na Hash:** Varredura caractere por caractere com conversão para *lowercase* em tempo de execução, permitindo encontrar locais independentemente da formatação textual da query.
 
 ## Apresentação em Vídeo
 **Vídeo de Apresentação e Explicação do Código:**
 
-[![Explicação do Código](https://img.youtube.com/vi/iwlPHIlbZy8/0.jpg)](https://www.youtube.com/watch?v=iwlPHIlbZy8)
+[![Explicação do Código](https://img.youtube.com/vi/RTrcx9Xhhbk/0.jpg)](https://www.youtube.com/watch?v=RTrcx9Xhhbk)
