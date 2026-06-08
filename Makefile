@@ -20,7 +20,7 @@ SRC_COMMON := \
 	backend/src/busca_hash.c \
 	backend/src/arvore_avl.c \
 	backend/src/busca_interpolacao.c \
-	backend/src/Arvore_entrega3/arvore_vp.c
+	backend/src/arvore_vp.c
 
 MAIN_SRC := backend/src/main.c
 API_SRC := backend/src/api_adapter.c
