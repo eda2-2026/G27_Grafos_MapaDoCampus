@@ -80,3 +80,9 @@ id;nome;bloco;andar;tipo;capacidade;tem_ar;responsavel;materia;horario
 80;Mocap;UED;1;Auditorio;100;1;Juliana;Evento;14:00-18:00
 81;I9;UAC;1;Sala;125;0;Aline;Maratona;14:00-18:00
 82;S1;UAC;2;Sala;120;1;Marcelo;Reuniao;14:00-16:00
+200;I10;UAC;1;Sala;40;1;Juliana;Compiladores;08:00-10:00
+201;I10;UAC;1;Sala;40;1;Juliana;Estruturas de Dados;10:00-12:00
+202;I10;UAC;1;Sala;40;1;Juliana;Grafos;12:00-14:00
+203;I10;UAC;1;Sala;40;1;Juliana;Sistemas Operacionais;14:00-16:00
+204;I10;UAC;1;Sala;40;1;Juliana;Redes;16:00-18:00
+205;I10;UAC;1;Sala;40;1;Juliana;Banco de Dados;18:00-20:00
