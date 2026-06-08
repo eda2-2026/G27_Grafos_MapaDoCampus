@@ -110,13 +110,13 @@ static void conserta_insercao_vp(NoVP **raiz, NoVP *z) {
             } 
             // CASO 4 e 5: O tio é PRETO
             else {
-                // CASO 2: 'z' forma um "triângulo" (filho à direita)
+                // CASO 4: 'z' forma um "triângulo" (filho à direita)
                 if (z == z->pai->dir) {
                     z = z->pai;
                     rotacao_esquerda(raiz, z); // Transforma num Caso 3 (linha reta)
                 }
                 
-                // CASO 3: 'z' forma uma "linha reta" (filho à esquerda)
+                // CASO 5: 'z' forma uma "linha reta" (filho à esquerda)
                 z->pai->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
                 rotacao_direita(raiz, z->pai->pai);
