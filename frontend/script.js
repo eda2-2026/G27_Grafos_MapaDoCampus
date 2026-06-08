@@ -59,7 +59,6 @@ function montarCardLocal(local) {
   const temAr = Number(local.temAr) === 1 ? "Sim" : "Nao";
   const responsavel = local.responsavel || local.professor || "-";
   
-  
   // LÓGICA VISUAL DA RELEVÂNCIA (QUICK SORT)
   let badgeRelevancia = "";
   if (local.score !== undefined) {
@@ -77,6 +76,10 @@ function montarCardLocal(local) {
       <p class="local-card-meta">Materia: ${escapeHtml(local.materia)}</p>
       <p class="local-card-meta">Horario: ${escapeHtml(local.horario || "-")}</p>
       <p class="local-card-meta">Responsavel: ${escapeHtml(responsavel)}</p>
+      
+      <button onclick="excluirAgendamento(${local.id})" style="margin-top: 12px; background: #fff7f7; color: var(--danger); border: 1px solid var(--danger); padding: 0.4rem 0.8rem; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;">
+        🗑️ Excluir Agendamento
+      </button>
     </article>
   `;
 }
@@ -398,6 +401,27 @@ formAgenda.addEventListener("submit", async (event) => {
   }
 });
 
+
+window.excluirAgendamento = async function(id) {
+  if (!confirm(`Tem certeza que deseja excluir o agendamento ID ${id}?\nA Árvore Vermelho-Preta será reequilibrada no servidor.`)) {
+    return;
+  }
+
+  try {
+    // MUDANÇA AQUI: Envia o ID na URL e apaga o atributo 'body'
+    const dados = await fetchJson(`${API_BASE}/api/locais?id=${id}`, {
+      method: "DELETE"
+    });
+
+    alert("✅ " + dados.mensagem);
+    
+    await carregarLocaisCadastrados();
+    document.getElementById("btnLimparPesquisa").click();
+    
+  } catch (erro) {
+    alert(`❌ Falha ao excluir: ${erro.message}`);
+  }
+};
 
 
 (async function iniciarTela() {

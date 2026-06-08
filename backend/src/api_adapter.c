@@ -29,6 +29,7 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 static void responder_agenda(int client_fd, const char *professor);
 static void responder_busca_relevancia(int client_fd, const char *query);
 static void responder_sugestao_avl(int client_fd, const char *query);
+static void tratar_api_locais_delete(int client_fd, const char *uri);
 
 typedef struct {
     FiltroLocal filtro;
@@ -485,7 +486,7 @@ static void enviar_resposta(
         "HTTP/1.1 %d %s\r\n"
         "Content-Type: %s\r\n"
         "Access-Control-Allow-Origin: *\r\n"
-        "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+        "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n"
         "Access-Control-Allow-Headers: Content-Type\r\n"
         "Content-Length: %zu\r\n"
         "Connection: close\r\n"
@@ -1749,6 +1750,16 @@ static void tratar_conexao(int client_fd) {
     }
 
     if (strncmp(uri, "/api/locais", 11) == 0) {
+
+        if (strcmp(metodo_http, "OPTIONS") == 0) {
+            const char *res = "HTTP/1.1 204 No Content\r\n"
+                              "Access-Control-Allow-Origin: *\r\n"
+                              "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n"
+                              "Access-Control-Allow-Headers: Content-Type\r\n\r\n";
+            send(client_fd, res, strlen(res), 0);
+            return; 
+        }
+
         if (strcmp(metodo_http, "GET") == 0) {
             const char *query = strchr(uri, '?');
             FiltroMutavel dados_filtro;
@@ -1779,6 +1790,11 @@ static void tratar_conexao(int client_fd) {
 
             const char *body = separador + 4;
             tratar_api_locais_post(client_fd, body);
+            return;
+        }
+
+        if (strcmp(metodo_http, "DELETE") == 0) {
+            tratar_api_locais_delete(client_fd, uri);
             return;
         }
 
@@ -1831,6 +1847,74 @@ static void responder_agenda(int client_fd, const char *professor) {
     enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", json);
     free(json);
     free(agenda);
+}
+
+static void tratar_api_locais_delete(int client_fd, const char *uri) {
+    char id_txt[32] = {0};
+    const char *query = strchr(uri, '?');
+    if (query != NULL) {
+        query_get_param(query + 1, "id", id_txt, sizeof(id_txt));
+    }
+
+    if (id_txt[0] == '\0') {
+        responder_json_erro(client_fd, 400, "ID do local ausente na URL");
+        return;
+    }
+
+    int id_deletar = 0;
+    if (parse_int(id_txt, &id_deletar) != 0 || id_deletar <= 0) {
+        responder_json_erro(client_fd, 400, "ID invalido para exclusao");
+        return;
+    }
+    int indice_localizado = -1;
+    for (size_t i = 0; i < g_total_locais; i++) {
+        if (g_locais[i].id == id_deletar) {
+            indice_localizado = (int)i;
+            break;
+        }
+    }
+
+    if (indice_localizado == -1) {
+        responder_json_erro(client_fd, 404, "Agendamento nao encontrado no banco");
+        return;
+    }
+
+    Local local_alvo = g_locais[indice_localizado];
+    inicializar_arvore_vp();
+    NoVP *raiz_sala = T_nil;
+    NoVP *no_para_deletar = T_nil;
+
+    for (size_t i = 0; i < g_total_locais; i++) {
+        if (strings_iguais_case_insensitive(g_locais[i].nome, local_alvo.nome)) {
+            int ini, fim;
+            if (converter_horario_em_minutos(g_locais[i].horario, &ini, &fim) == 0) {
+                NoVP *no = criar_no_vp(ini, fim, g_locais[i]);
+                inserir_arvore_vp(&raiz_sala, no);
+                if (g_locais[i].id == id_deletar) {
+                    no_para_deletar = no;
+                }
+            }
+        }
+    }
+
+    if (no_para_deletar != T_nil) {
+        remover_arvore_vp(&raiz_sala, no_para_deletar);
+    }
+
+    liberar_arvore_vp(raiz_sala);
+
+    for (size_t i = indice_localizado; i < g_total_locais - 1; i++) {
+        g_locais[i] = g_locais[i + 1];
+    }
+    g_total_locais--;
+
+    reconstruir_hash();
+    salvar_banco_csv();
+
+    char resposta[256];
+    snprintf(resposta, sizeof(resposta), 
+        "{\"ok\":true,\"mensagem\":\"Agendamento excluido e reequilibrado via Arvore VP com sucesso!\"}");
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", resposta);
 }
 
 int main(int argc, char **argv) {

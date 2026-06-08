@@ -1,5 +1,6 @@
 #include "arvore_vp.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 NoVP *T_nil = NULL;
 
@@ -39,6 +40,9 @@ NoVP* criar_no_vp(int inicio, int fim, Local local) {
 
 //ROTAÇÕES
 void rotacao_esquerda(NoVP **raiz, NoVP *x) {
+    printf("\n🔄 [ÁRVORE VP] Alerta de Desbalanceamento!\n");
+    printf("   -> Executando Rotação à ESQUERDA no nó de horário %d para reequilibrar...\n", x->inicio_minutos);
+
     NoVP *y = x->dir;
     x->dir = y->esq;
 
@@ -63,6 +67,9 @@ void rotacao_esquerda(NoVP **raiz, NoVP *x) {
 }
 
 void rotacao_direita(NoVP **raiz, NoVP *y) {
+    printf("\n🔄 [ÁRVORE VP] Alerta de Desbalanceamento!\n");
+    printf("   -> Executando Rotação à DIREITA no nó de horário %d para reequilibrar...\n", y->inicio_minutos);
+
     NoVP *x = y->esq;
     y->esq = x->dir;
 
@@ -264,6 +271,10 @@ void remover_arvore_vp(NoVP **raiz, NoVP *z) {
     NoVP *y = z;
     NoVP *x;
     CorVP cor_original_y = y->cor;
+
+    printf("\n🗑️ [ÁRVORE VP] Removendo agendamento (Horário: %d). Cor do nó: %s\n", 
+           z->inicio_minutos, 
+           (z->cor == VERMELHO) ? "VERMELHO" : "PRETO");
 
     if (z->esq == T_nil) {
         x = z->dir;
