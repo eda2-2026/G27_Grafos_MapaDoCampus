@@ -245,6 +245,32 @@ tr:hover td {
   color: var(--danger);
 }
 
+.alerta-conflito {
+  grid-column: 1 / -1; /* Ocupa a largura total do form */
+  background-color: #fff7f7;
+  border: 2px solid var(--danger);
+  color: var(--danger);
+  padding: 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+  /* Chama a animação para piscar a tela chamando a atenção do usuário */
+  animation: piscarErro 0.4s ease-in-out 2 alternate; 
+}
+
+.alerta-conflito.oculta {
+  display: none;
+}
+
+@keyframes piscarErro {
+  0% { transform: scale(1); opacity: 1; }
+  100% { 
+    transform: scale(1.02); 
+    opacity: 0.8; 
+    box-shadow: 0 0 12px rgba(153, 34, 34, 0.4); 
+  }
+}
+
 @media (min-width: 880px) {
   .grid.two {
     grid-template-columns: 1fr 1fr;

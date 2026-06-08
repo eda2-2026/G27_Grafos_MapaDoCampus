@@ -17,6 +17,9 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 #include "dataset.h"
 #include "util.h"
 #include "busca_hash.h"
+#include "arvore_avl.h"
+#include "arvore_vp.h"
+
 
 #define CAPACIDADE_DATASET 1024
 #define REQ_BUF 16384
@@ -25,6 +28,8 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 
 static void responder_agenda(int client_fd, const char *professor);
 static void responder_busca_relevancia(int client_fd, const char *query);
+static void responder_sugestao_avl(int client_fd, const char *query);
+static void tratar_api_locais_delete(int client_fd, const char *uri);
 
 typedef struct {
     FiltroLocal filtro;
@@ -481,7 +486,7 @@ static void enviar_resposta(
         "HTTP/1.1 %d %s\r\n"
         "Content-Type: %s\r\n"
         "Access-Control-Allow-Origin: *\r\n"
-        "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+        "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n"
         "Access-Control-Allow-Headers: Content-Type\r\n"
         "Content-Length: %zu\r\n"
         "Connection: close\r\n"
@@ -982,6 +987,108 @@ static void responder_ranking_capacidade(int client_fd, const char *query) {
     enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
 }
 
+// Endpoint da funcionalidade AVL: recebe filtros da URL, chama a arvore e devolve JSON.
+static void responder_sugestao_avl(int client_fd, const char *query) {
+    // Reaproveita a mesma estrutura de filtros das buscas existentes no projeto.
+    FiltroMutavel dados_filtro;
+    filtro_resetar(&dados_filtro);
+    preencher_filtro_por_query(&dados_filtro, query);
+
+    // Valida ID caso ele venha por engano na query; mantem o padrao das outras rotas.
+    if (dados_filtro.id_invalido) {
+        responder_json_erro(client_fd, 400, "Parametro id invalido");
+        return;
+    }
+
+    // A capacidade minima e obrigatoria, pois ela e a chave da busca lower bound na AVL.
+    if (dados_filtro.filtro.capacidade_minima < 0) {
+        responder_json_erro(client_fd, 400, "Informe capacidadeMin com inteiro >= 0");
+        return;
+    }
+
+    // Executa a regra principal: montar a AVL filtrada e procurar a menor capacidade suficiente.
+    ResultadoAvlCapacidade resultado;
+    if (avl_sugerir_por_capacidade(
+            g_locais,
+            g_total_locais,
+            &dados_filtro.filtro,
+            &resultado
+        ) != 0) {
+        responder_json_erro(client_fd, 500, "Falha ao consultar sugestao com AVL");
+        return;
+    }
+
+    // Inicia o JSON com identificacao do metodo e capacidade pedida pelo usuario.
+    char body[RESP_BUF];
+    size_t cursor = 0;
+    int n = snprintf(
+        body + cursor,
+        sizeof(body) - cursor,
+        "{\"ok\":true,\"consulta\":\"capacidadeMin\",\"metodoUsado\":\"arvore_avl_lower_bound(capacidade)\",\"capacidadeSolicitada\":%d,",
+        dados_filtro.filtro.capacidade_minima
+    );
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    // Escreve a capacidade ideal encontrada; null indica que nenhuma sala atende.
+    if (resultado.capacidade_encontrada >= 0) {
+        n = snprintf(
+            body + cursor,
+            sizeof(body) - cursor,
+            "\"capacidadeEncontrada\":%d,",
+            resultado.capacidade_encontrada
+        );
+    } else {
+        n = snprintf(body + cursor, sizeof(body) - cursor, "\"capacidadeEncontrada\":null,");
+    }
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    // Adiciona metricas da AVL para aparecerem na tela e ajudarem na explicacao.
+    n = snprintf(
+        body + cursor,
+        sizeof(body) - cursor,
+        "\"totalIndexados\":%zu,\"comparacoes\":%lu,\"rotacoes\":%lu,\"alturaArvore\":%d,\"total\":%zu,\"locais\":[",
+        resultado.total_indexados,
+        resultado.comparacoes,
+        resultado.rotacoes,
+        resultado.altura_arvore,
+        resultado.quantidade
+    );
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    // Converte os indices retornados pela AVL em objetos Local completos no JSON.
+    for (size_t i = 0; i < resultado.quantidade; i++) {
+        size_t idx = resultado.indices[i];
+        if (idx >= g_total_locais) {
+            continue;
+        }
+        if (json_append_local(body, sizeof(body), &cursor, &g_locais[idx], i > 0) != 0) {
+            responder_json_erro(client_fd, 500, "Resposta excedeu limite");
+            return;
+        }
+    }
+
+    // Fecha o array de locais e envia a resposta HTTP para o frontend.
+    n = snprintf(body + cursor, sizeof(body) - cursor, "]}");
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
+}
+
 static void adicionar_candidatos_de_resultado(
     const Local *locais,
     size_t total,
@@ -1379,16 +1486,57 @@ static int parse_local_from_form(const char *body, Local *local, char *erro, siz
 
 static void tratar_api_locais_post(int client_fd, const char *body) {
     if (g_total_locais >= CAPACIDADE_DATASET) {
-        responder_json_erro(client_fd, 500, "Capacidade maxima do banco atingida");
+        responder_json_erro(client_fd, 500, "Capacidade maxima atingida");
         return;
     }
 
     Local novo;
+    // A MÁGICA: Zera completamente a memória da struct para matar os "fantasmas"
+    memset(&novo, 0, sizeof(Local)); 
+    
     char erro[256] = {0};
     if (parse_local_from_form(body, &novo, erro, sizeof(erro)) != 0) {
         responder_json_erro(client_fd, 400, erro);
         return;
     }
+
+    // ÁRVORE VERMELHO-PRETA
+    inicializar_arvore_vp();
+
+    int novo_inicio, novo_fim;
+    if (converter_horario_em_minutos(novo.horario, &novo_inicio, &novo_fim) == 0) {
+        
+        NoVP *raiz_sala = T_nil;
+
+        for (size_t i = 0; i < g_total_locais; i++) {
+            if (strings_iguais_case_insensitive(g_locais[i].nome, novo.nome)) {
+                int ini_exist, fim_exist;
+                if (converter_horario_em_minutos(g_locais[i].horario, &ini_exist, &fim_exist) == 0) {
+                    NoVP *no = criar_no_vp(ini_exist, fim_exist, g_locais[i]);
+                    inserir_arvore_vp(&raiz_sala, no);
+                }
+            }
+        }
+
+        NoVP *conflito = buscar_conflito_vp(raiz_sala, novo_inicio, novo_fim);
+
+        if (conflito != NULL) {
+            char msg_erro[512];
+            snprintf(msg_erro, sizeof(msg_erro),
+                "Conflito de horario! A sala '%s' ja esta reservada para a materia '%s' (%s).",
+                novo.nome, conflito->local_dados.materia, conflito->local_dados.horario);
+
+            responder_json_erro(client_fd, 409, msg_erro);
+            
+            // Limpa a RAM antes de abortar
+            liberar_arvore_vp(raiz_sala); 
+            return; 
+        }
+        
+        // Se passou ileso (Aulas Coladas), limpa a RAM e segue para o cadastro
+        liberar_arvore_vp(raiz_sala);
+    }
+    //fim arvore vp
 
     unsigned long movimentacoes = 0;
     if (inserir_local_ordenado_por_id(
@@ -1510,7 +1658,7 @@ static void tratar_conexao(int client_fd) {
             200,
             "OK",
             "application/json; charset=utf-8",
-            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\",\"GET /api/ranking/capacidade\"]}"
+            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\",\"GET /api/ranking/capacidade\",\"GET /api/sugestao/avl\"]}"
         );
         return;
     }
@@ -1524,6 +1672,19 @@ static void tratar_conexao(int client_fd) {
 
         const char *query = strchr(uri, '?');
         responder_ranking_capacidade(client_fd, query == NULL ? "" : query + 1);
+        return;
+    }
+
+    // Rota da AVL: sugere a menor sala que atende a capacidade minima solicitada.
+    if (strncmp(uri, "/api/sugestao/avl", 17) == 0 &&
+        (uri[17] == '\0' || uri[17] == '?')) {
+        if (strcmp(metodo_http, "GET") != 0) {
+            responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
+            return;
+        }
+
+        const char *query = strchr(uri, '?');
+        responder_sugestao_avl(client_fd, query == NULL ? "" : query + 1);
         return;
     }
 
@@ -1589,6 +1750,16 @@ static void tratar_conexao(int client_fd) {
     }
 
     if (strncmp(uri, "/api/locais", 11) == 0) {
+
+        if (strcmp(metodo_http, "OPTIONS") == 0) {
+            const char *res = "HTTP/1.1 204 No Content\r\n"
+                              "Access-Control-Allow-Origin: *\r\n"
+                              "Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS\r\n"
+                              "Access-Control-Allow-Headers: Content-Type\r\n\r\n";
+            send(client_fd, res, strlen(res), 0);
+            return; 
+        }
+
         if (strcmp(metodo_http, "GET") == 0) {
             const char *query = strchr(uri, '?');
             FiltroMutavel dados_filtro;
@@ -1619,6 +1790,11 @@ static void tratar_conexao(int client_fd) {
 
             const char *body = separador + 4;
             tratar_api_locais_post(client_fd, body);
+            return;
+        }
+
+        if (strcmp(metodo_http, "DELETE") == 0) {
+            tratar_api_locais_delete(client_fd, uri);
             return;
         }
 
@@ -1671,6 +1847,74 @@ static void responder_agenda(int client_fd, const char *professor) {
     enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", json);
     free(json);
     free(agenda);
+}
+
+static void tratar_api_locais_delete(int client_fd, const char *uri) {
+    char id_txt[32] = {0};
+    const char *query = strchr(uri, '?');
+    if (query != NULL) {
+        query_get_param(query + 1, "id", id_txt, sizeof(id_txt));
+    }
+
+    if (id_txt[0] == '\0') {
+        responder_json_erro(client_fd, 400, "ID do local ausente na URL");
+        return;
+    }
+
+    int id_deletar = 0;
+    if (parse_int(id_txt, &id_deletar) != 0 || id_deletar <= 0) {
+        responder_json_erro(client_fd, 400, "ID invalido para exclusao");
+        return;
+    }
+    int indice_localizado = -1;
+    for (size_t i = 0; i < g_total_locais; i++) {
+        if (g_locais[i].id == id_deletar) {
+            indice_localizado = (int)i;
+            break;
+        }
+    }
+
+    if (indice_localizado == -1) {
+        responder_json_erro(client_fd, 404, "Agendamento nao encontrado no banco");
+        return;
+    }
+
+    Local local_alvo = g_locais[indice_localizado];
+    inicializar_arvore_vp();
+    NoVP *raiz_sala = T_nil;
+    NoVP *no_para_deletar = T_nil;
+
+    for (size_t i = 0; i < g_total_locais; i++) {
+        if (strings_iguais_case_insensitive(g_locais[i].nome, local_alvo.nome)) {
+            int ini, fim;
+            if (converter_horario_em_minutos(g_locais[i].horario, &ini, &fim) == 0) {
+                NoVP *no = criar_no_vp(ini, fim, g_locais[i]);
+                inserir_arvore_vp(&raiz_sala, no);
+                if (g_locais[i].id == id_deletar) {
+                    no_para_deletar = no;
+                }
+            }
+        }
+    }
+
+    if (no_para_deletar != T_nil) {
+        remover_arvore_vp(&raiz_sala, no_para_deletar);
+    }
+
+    liberar_arvore_vp(raiz_sala);
+
+    for (size_t i = indice_localizado; i < g_total_locais - 1; i++) {
+        g_locais[i] = g_locais[i + 1];
+    }
+    g_total_locais--;
+
+    reconstruir_hash();
+    salvar_banco_csv();
+
+    char resposta[256];
+    snprintf(resposta, sizeof(resposta), 
+        "{\"ok\":true,\"mensagem\":\"Agendamento excluido e reequilibrado via Arvore VP com sucesso!\"}");
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", resposta);
 }
 
 int main(int argc, char **argv) {

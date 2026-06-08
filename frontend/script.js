@@ -17,10 +17,17 @@ const statusCadastro = document.getElementById("statusCadastro");
 const listaCadastrados = document.getElementById("listaCadastrados");
 const statusRanking = document.getElementById("statusRanking");
 const listaRanking = document.getElementById("listaRanking");
+
+// Elementos da funcionalidade AVL: formulario, texto de status e lista de sugestoes.
+const formSugestaoAvl = document.getElementById("formSugestaoAvl");
+const statusSugestaoAvl = document.getElementById("statusSugestaoAvl");
+const listaSugestaoAvl = document.getElementById("listaSugestaoAvl");
+const alertaConflito = document.getElementById("alertaConflito");
 //MERGE
 const formAgenda = document.getElementById("formAgenda");
 const statusAgenda = document.getElementById("statusAgenda");
 const listaAgenda = document.getElementById("listaAgenda");
+
 
 function setStatus(elemento, texto, erro = false) {
   elemento.textContent = texto;
@@ -52,7 +59,6 @@ function montarCardLocal(local) {
   const temAr = Number(local.temAr) === 1 ? "Sim" : "Nao";
   const responsavel = local.responsavel || local.professor || "-";
   
-  
   // LÓGICA VISUAL DA RELEVÂNCIA (QUICK SORT)
   let badgeRelevancia = "";
   if (local.score !== undefined) {
@@ -70,6 +76,10 @@ function montarCardLocal(local) {
       <p class="local-card-meta">Materia: ${escapeHtml(local.materia)}</p>
       <p class="local-card-meta">Horario: ${escapeHtml(local.horario || "-")}</p>
       <p class="local-card-meta">Responsavel: ${escapeHtml(responsavel)}</p>
+      
+      <button onclick="excluirAgendamento(${local.id})" style="margin-top: 12px; background: #fff7f7; color: var(--danger); border: 1px solid var(--danger); padding: 0.4rem 0.8rem; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;">
+        🗑️ Excluir Agendamento
+      </button>
     </article>
   `;
 }
@@ -210,6 +220,52 @@ async function carregarRankingCapacidade() {
   );
 }
 
+// Monta os parametros que serao enviados para a rota /api/sugestao/avl.
+function montarQuerySugestaoAvl() {
+  const params = new URLSearchParams();
+
+  // Le os campos da tela: capacidade obrigatoria e filtros opcionais.
+  const capacidade = document.getElementById("sCapacidade").value.trim();
+  const bloco = document.getElementById("sBloco").value.trim();
+  const horario = document.getElementById("sHorario").value.trim();
+  const temAr = document.getElementById("sTemAr").value;
+
+  // A AVL usa capacidadeMin como chave de busca: ela procura a menor capacidade >= valor digitado.
+  if (capacidade) params.set("capacidadeMin", capacidade);
+  if (bloco) params.set("bloco", bloco);
+  if (horario) params.set("horario", horario);
+  if (temAr !== "") params.set("temAr", temAr);
+
+  return params;
+}
+
+// Chama o backend, recebe o resultado da AVL e renderiza as salas sugeridas.
+async function carregarSugestaoAvl() {
+  const params = montarQuerySugestaoAvl();
+  const capacidade = Number(document.getElementById("sCapacidade").value.trim());
+  const dados = await fetchJson(`${API_BASE}/api/sugestao/avl?${params.toString()}`);
+  const locais = dados.locais || [];
+
+  // Os cards usam a mesma funcao de renderizacao das outras listas do sistema.
+  renderListaResultados(listaSugestaoAvl, locais, "Nenhuma sala atende esses criterios.");
+
+  // Quando nao ha sugestao, ainda mostramos as metricas para evidenciar que a AVL foi consultada.
+  if (locais.length === 0) {
+    setStatus(
+      statusSugestaoAvl,
+      `Metodo usado: ${dados.metodoUsado || "arvore_avl"} | Nenhuma capacidade suficiente encontrada | Indexados=${dados.totalIndexados ?? 0} | Comparacoes=${dados.comparacoes ?? "-"} | Rotacoes=${dados.rotacoes ?? "-"}.`
+    );
+    return;
+  }
+
+  // Quando ha sugestao, mostra capacidade encontrada e dados da arvore para a apresentacao.
+  const sobra = Number(dados.capacidadeEncontrada) - capacidade;
+  setStatus(
+    statusSugestaoAvl,
+    `Metodo usado: ${dados.metodoUsado || "arvore_avl"} | Capacidade solicitada=${dados.capacidadeSolicitada} | Melhor capacidade=${dados.capacidadeEncontrada} | Sobra=${sobra} lugares | Altura=${dados.alturaArvore ?? "-"} | Rotacoes=${dados.rotacoes ?? "-"} | Comparacoes=${dados.comparacoes ?? "-"}.`
+  );
+}
+
 formPesquisa.addEventListener("submit", async (event) => {
   event.preventDefault();
   setStatus(statusPesquisa, "Pesquisando locais...");
@@ -230,6 +286,9 @@ btnLimparPesquisa.addEventListener("click", () => {
 
 formCadastro.addEventListener("submit", async (event) => {
   event.preventDefault();
+
+  // Esconde o alerta de conflitos antes de uma nova tentativa
+  alertaConflito.classList.add("oculta");
 
   const payload = new URLSearchParams({
     id: document.getElementById("cId").value.trim(),
@@ -256,6 +315,12 @@ formCadastro.addEventListener("submit", async (event) => {
       body: payload.toString(),
     });
 
+    alertaConflito.textContent = "✓ Horário verificado com sucesso pela Árvore Vermelho-Preta: Sem conflitos!";
+    alertaConflito.style.borderColor = "var(--accent)"; // Usa o verde do seu projeto
+    alertaConflito.style.color = "var(--accent)";
+    alertaConflito.style.backgroundColor = "var(--accent-soft)";
+    alertaConflito.classList.remove("oculta");
+
     const metodo = dados.metodoInsercao || "insertion_sort_id";
     const movimentacoes = dados.movimentacoes ?? "-";
     setStatus(
@@ -264,9 +329,18 @@ formCadastro.addEventListener("submit", async (event) => {
     );
     formCadastro.reset();
     await carregarLocaisCadastrados();
+    
   } catch (erro) {
-    setStatus(statusCadastro, `Falha ao cadastrar local: ${erro.message}`, true);
-    renderErroEmCard(listaCadastrados, erro.message);
+    // AQUI ESTÁ A INTEGRAÇÃO COM A ÁRVORE VERMELHO-PRETA
+    if (erro.message.includes("Conflito de horario")) {
+      alertaConflito.textContent = erro.message;
+      alertaConflito.classList.remove("oculta"); // Mostra a caixa piscando
+      setStatus(statusCadastro, "Erro: A Árvore Vermelho-Preta bloqueou o cadastro.", true);
+    } else {
+      // Erro padrão (ID duplicado, etc)
+      setStatus(statusCadastro, `Falha ao cadastrar local: ${erro.message}`, true);
+      renderErroEmCard(listaCadastrados, erro.message);
+    }
   }
 });
 
@@ -279,6 +353,19 @@ formRanking.addEventListener("submit", async (event) => {
   } catch (erro) {
     setStatus(statusRanking, `Falha ao gerar ranking: ${erro.message}`, true);
     renderErroEmCard(listaRanking, erro.message);
+  }
+});
+
+// Evento do formulario da AVL: evita reload da pagina e dispara a consulta na API.
+formSugestaoAvl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setStatus(statusSugestaoAvl, "Consultando arvore AVL...");
+
+  try {
+    await carregarSugestaoAvl();
+  } catch (erro) {
+    setStatus(statusSugestaoAvl, `Falha ao consultar AVL: ${erro.message}`, true);
+    renderErroEmCard(listaSugestaoAvl, erro.message);
   }
 });
 
@@ -315,10 +402,33 @@ formAgenda.addEventListener("submit", async (event) => {
 });
 
 
+window.excluirAgendamento = async function(id) {
+  if (!confirm(`Tem certeza que deseja excluir o agendamento ID ${id}?\nA Árvore Vermelho-Preta será reequilibrada no servidor.`)) {
+    return;
+  }
+
+  try {
+    // MUDANÇA AQUI: Envia o ID na URL e apaga o atributo 'body'
+    const dados = await fetchJson(`${API_BASE}/api/locais?id=${id}`, {
+      method: "DELETE"
+    });
+
+    alert("✅ " + dados.mensagem);
+    
+    await carregarLocaisCadastrados();
+    document.getElementById("btnLimparPesquisa").click();
+    
+  } catch (erro) {
+    alert(`❌ Falha ao excluir: ${erro.message}`);
+  }
+};
+
 
 (async function iniciarTela() {
   renderListaResultados(listaPesquisa, [], "Digite ao menos um filtro para pesquisar.");
   renderListaResultados(listaRanking, [], "Clique em gerar ranking para ver as maiores salas.");
+  // Estado inicial da lista AVL antes do usuario consultar uma sugestao.
+  renderListaResultados(listaSugestaoAvl, [], "Informe a quantidade de alunos para receber uma sugestao.");
   renderListaResultados(listaAgenda, [], "Aguardando busca pela agenda do professor.");
   try {
     await carregarLocaisCadastrados();
