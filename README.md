@@ -1,7 +1,7 @@
 # Mapa de Campus
 
-Número da Lista: Trabalho 4 - Grafos <br>
-Conteúdo da Disciplina: Grafos <br>
+Número da Lista: Trabalho 3 - Árvores <br>
+Conteúdo da Disciplina: Árvores Binárias de Busca Balanceadas <br>
 
 ## Alunas
 |Matrícula | Aluno |
@@ -15,6 +15,8 @@ O **Mapa de Campus** é um serviço projetado para gerenciar e consultar o catá
 Nesta **Entrega 3**, o sistema evoluiu para incorporar o poder das **Árvores Binárias de Busca Balanceadas**, garantindo tempo de resposta logarítmico O(log n) para operações críticas de negócio. O projeto agora possui duas funcionalidades centrais baseadas nessas estruturas:
 
 - **Sugestão Inteligente de Sala (Árvore AVL — Marina):** O usuário informa a quantidade de alunos e filtros opcionais (`bloco`, `horário`, `temAr`). O backend monta dinamicamente uma Árvore AVL indexada por capacidade. Através de uma busca do tipo *lower bound*, o sistema navega na árvore balanceada para retornar a menor capacidade maior ou igual à solicitada (estratégia *best fit*). Cada nó da AVL gerencia uma lista interna de salas com a mesma capacidade.
+
+- **Sugestão de Sala com Menor Rota (AVL + BFS):** O usuário informa a quantidade de alunos e o local de origem. Primeiro, a AVL encontra a menor sala suficiente para a turma. Em seguida, o backend carrega o grafo de conexões do campus e usa BFS para retornar o menor caminho entre a origem e a sala sugerida.
 
 - **Validador Dinâmico de Conflitos (Árvore Vermelho-Preta — Júlia):** O sistema impede o agendamento duplo de salas. Ao tentar cadastrar uma nova aula, o backend constrói uma Árvore Vermelho-Preta na memória RAM contendo todas as aulas daquela sala específica, indexadas em minutos. A árvore atua como uma barreira geométrica de tempo:
   - **Inserção Segura:** Se os horários se sobrepõem, a árvore bloqueia o cadastro e emite um alerta vermelho indicando a aula conflitante. Aulas estritamente "coladas" são permitidas pela matemática da árvore.
@@ -37,6 +39,10 @@ O projeto também mantém as otimizações das entregas anteriores, atuando como
 **3. Exclusão e Reequilíbrio (Duplo Preto) — Árvore Vermelho-Preta**
 > Cada sala listada possui um botão "Excluir Agendamento". Ao confirmar a exclusão, a requisição DELETE aciona o backend em C. O nó correspondente é retirado da Árvore Vermelho-Preta. Se o nó for Preto, o sistema executa as rotações para reequilibrar a altura negra da árvore de forma invisível para o usuário, mas visível nos logs do servidor.
 > **Tela:** Botão "🗑️ Excluir Agendamento" nos cards de locais.
+
+**4. Melhor sala com menor caminho — AVL + BFS**
+> O usuário informa a origem e a quantidade de alunos. A AVL seleciona a menor capacidade suficiente e o BFS percorre o grafo do campus por níveis para devolver a rota com menos conexões até a sala escolhida.
+> **Tela:** Seção "Sugestão de sala com menor rota".
 
 ### 📝 Nota de Arquitetura e Implementação
 
@@ -120,6 +126,10 @@ Após rodar os dois comandos, abra o seu navegador e acesse: `http://localhost:5
   * Parâmetro obrigatório: `capacidadeMin` (ex: `GET /api/sugestao/avl?capacidadeMin=73`).
   * Parâmetros opcionais: `bloco`, `horario`, `temAr`, `andar`, `tipo`, `responsavel`, `materia`.
   * A resposta inclui métricas: `comparacoes`, `rotacoes`, `alturaArvore`, `totalIndexados` e `capacidadeEncontrada`.
+* `GET /api/sugestao/avl-bfs`: Sugestão de sala com menor rota usando **Árvore AVL + BFS**.
+  * Parâmetros obrigatórios: `capacidadeMin` e `origem` (ex: `GET /api/sugestao/avl-bfs?capacidadeMin=73&origem=Biblioteca&bloco=UAC`).
+  * Parâmetros opcionais: `bloco`, `horario`, `temAr`, `andar`, `tipo`, `responsavel`, `materia`.
+  * A resposta inclui métricas da AVL e do BFS: `comparacoesAvl`, `rotacoesAvl`, `alturaArvore`, `distanciaBfs`, `verticesVisitadosBfs`, `arestasAnalisadasBfs` e `caminho`.
 
 *Exemplo de requisição de busca nativa via terminal (cURL):*
 ```bash

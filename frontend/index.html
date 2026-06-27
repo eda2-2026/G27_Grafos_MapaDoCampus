@@ -154,14 +154,17 @@
       </div>
     </section>
 
-    <!-- Secao da funcionalidade AVL: recebe os criterios e mostra a melhor sala sugerida. -->
+    <!-- Secao da funcionalidade AVL + BFS: recebe os criterios e mostra sala sugerida com rota. -->
     <section class="card">
       <h2>Sugestao inteligente de sala</h2>
 
-      <!-- Formulario enviado pelo JavaScript para montar a query do endpoint /api/sugestao/avl. -->
+      <!-- Formulario enviado pelo JavaScript para montar a query do endpoint /api/sugestao/avl-bfs. -->
       <form id="formSugestaoAvl" class="grid form-grid">
         <label for="sCapacidade">Quantidade de alunos</label>
         <input id="sCapacidade" type="number" min="0" placeholder="Ex: 73" required />
+
+        <label for="sOrigem">Local de origem</label>
+        <input id="sOrigem" placeholder="Ex: Biblioteca, I1 ou RU" required />
 
         <label for="sBloco">Bloco opcional</label>
         <input id="sBloco" placeholder="Ex: UAC" />
@@ -176,13 +179,14 @@
           <option value="0">Nao</option>
         </select>
 
-        <button type="submit" class="full">Sugerir sala (Arvore AVL)</button>
+        <button type="submit" class="full">Sugerir sala + rota (AVL + BFS)</button>
       </form>
 
-      <!-- Area de retorno: exibe metricas da AVL e cards das salas com a capacidade ideal. -->
+      <!-- Area de retorno: exibe metricas da AVL, caminho BFS e card da sala ideal. -->
       <div class="resultado-pesquisa">
-        <h3>Melhor encaixe por capacidade</h3>
-        <p id="statusSugestaoAvl" class="resultado-status">Informe a quantidade de alunos para receber uma sugestao.</p>
+        <h3>Melhor sala e caminho</h3>
+        <p id="statusSugestaoAvl" class="resultado-status">Informe a quantidade de alunos e a origem para receber uma sugestao com rota.</p>
+        <div id="caminhoSugestaoAvl" class="caminho-rota"></div>
         <div id="listaSugestaoAvl" class="lista-locais"></div>
       </div>
     </section>

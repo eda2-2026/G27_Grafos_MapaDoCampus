@@ -1,0 +1,60 @@
+origem;destino
+I1;Corredor UAC 1
+I2;Corredor UAC 1
+I3;Corredor UAC 1
+I4;Corredor UAC 1
+I5;Corredor UAC 1
+I6;Corredor UAC 1
+I7;Corredor UAC 1
+I8;Corredor UAC 1
+I9;Corredor UAC 1
+I10;Corredor UAC 1
+Biblioteca;Corredor UAC 1
+Secretaria;Corredor UAC 1
+Auditorio;Hall UAC
+Corredor UAC 1;Hall UAC
+Hall UAC;Escada UAC
+Hall UAC;Saida UAC
+Escada UAC;Corredor UAC 2
+S1;Corredor UAC 2
+S2;Corredor UAC 2
+S3;Corredor UAC 2
+S4;Corredor UAC 2
+S5;Corredor UAC 2
+S6;Corredor UAC 2
+S7;Corredor UAC 2
+S8;Corredor UAC 2
+S9;Corredor UAC 2
+S10;Corredor UAC 2
+Saida UAC;Caminho externo
+Caminho externo;RU
+Caminho externo;Entrada UED
+Entrada UED;Corredor UED 1
+Mocap;Corredor UED 1
+Lab Fisica 1;Corredor UED 1
+Lab Fisica 2;Corredor UED 1
+Lab Quimica;Corredor UED 1
+Lab Quimica Exp;Corredor UED 1
+Lab PED1;Corredor UED 1
+Lab PED2;Corredor UED 1
+Lab Termodinamica;Corredor UED 1
+Lab Mecanica Fluidos;Corredor UED 1
+Lab Automacao;Corredor UED 1
+Lab Eletromagnetismo;Corredor UED 1
+Corredor UED 1;Escada UED
+Escada UED;Corredor UED 2
+Sala 201;Corredor UED 2
+Sala 202;Corredor UED 2
+Sala 203;Corredor UED 2
+Sala 204;Corredor UED 2
+Sala 205;Corredor UED 2
+Sala 206;Corredor UED 2
+Sala 207;Corredor UED 2
+Sala 208;Corredor UED 2
+Sala 209;Corredor UED 2
+Sala 210;Corredor UED 2
+Sala 211;Corredor UED 2
+Sala 212;Corredor UED 2
+Sala 213;Corredor UED 2
+Sala 214;Corredor UED 2
+Conteiner 01;Caminho externo

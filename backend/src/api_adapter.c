@@ -19,16 +19,19 @@ O que faz: conecta o frontend ao backend em C com escolha automatica de algoritm
 #include "busca_hash.h"
 #include "arvore_avl.h"
 #include "arvore_vp.h"
+#include "grafo.h"
 
 
 #define CAPACIDADE_DATASET 1024
 #define REQ_BUF 16384
 #define RESP_BUF 65536
 #define DB_PATH "backend/data/locais.csv"
+#define GRAFO_PATH "backend/data/conexoes.csv"
 
 static void responder_agenda(int client_fd, const char *professor);
 static void responder_busca_relevancia(int client_fd, const char *query);
 static void responder_sugestao_avl(int client_fd, const char *query);
+static void responder_sugestao_avl_bfs(int client_fd, const char *query);
 static void tratar_api_locais_delete(int client_fd, const char *uri);
 
 typedef struct {
@@ -1089,6 +1092,175 @@ static void responder_sugestao_avl(int client_fd, const char *query) {
     enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
 }
 
+static int json_append_caminho_bfs(
+    char *body,
+    size_t capacidade,
+    size_t *cursor,
+    const ResultadoBfs *rota
+) {
+    int n = snprintf(body + *cursor, capacidade - *cursor, "\"caminho\":[");
+    if (n < 0 || (size_t)n >= capacidade - *cursor) {
+        return -1;
+    }
+    *cursor += (size_t)n;
+
+    for (size_t i = 0; i < rota->tamanho; i++) {
+        char nome[GRAFO_NOME_MAX * 2];
+        json_escape(rota->caminho[i], nome, sizeof(nome));
+
+        n = snprintf(
+            body + *cursor,
+            capacidade - *cursor,
+            "%s\"%s\"",
+            i > 0 ? "," : "",
+            nome
+        );
+        if (n < 0 || (size_t)n >= capacidade - *cursor) {
+            return -1;
+        }
+        *cursor += (size_t)n;
+    }
+
+    n = snprintf(body + *cursor, capacidade - *cursor, "]");
+    if (n < 0 || (size_t)n >= capacidade - *cursor) {
+        return -1;
+    }
+    *cursor += (size_t)n;
+    return 0;
+}
+
+// Combina a AVL de capacidade com BFS: escolhe uma sala ideal e calcula a menor rota.
+static void responder_sugestao_avl_bfs(int client_fd, const char *query) {
+    FiltroMutavel dados_filtro;
+    char origem[GRAFO_NOME_MAX] = {0};
+
+    filtro_resetar(&dados_filtro);
+    preencher_filtro_por_query(&dados_filtro, query);
+    query_get_param(query, "origem", origem, sizeof(origem));
+
+    if (origem[0] == '\0') {
+        responder_json_erro(client_fd, 400, "Informe origem para calcular a rota com BFS");
+        return;
+    }
+
+    if (dados_filtro.id_invalido) {
+        responder_json_erro(client_fd, 400, "Parametro id invalido");
+        return;
+    }
+
+    if (dados_filtro.filtro.capacidade_minima < 0) {
+        responder_json_erro(client_fd, 400, "Informe capacidadeMin com inteiro >= 0");
+        return;
+    }
+
+    ResultadoAvlCapacidade resultado_avl;
+    if (avl_sugerir_por_capacidade(
+            g_locais,
+            g_total_locais,
+            &dados_filtro.filtro,
+            &resultado_avl
+        ) != 0) {
+        responder_json_erro(client_fd, 500, "Falha ao consultar sugestao com AVL");
+        return;
+    }
+
+    if (resultado_avl.quantidade == 0) {
+        char body[RESP_BUF];
+        snprintf(
+            body,
+            sizeof(body),
+            "{\"ok\":true,\"consulta\":\"capacidadeMin+origem\",\"metodoUsado\":\"arvore_avl_lower_bound(capacidade)+bfs_menor_rota\",\"capacidadeSolicitada\":%d,\"capacidadeEncontrada\":null,\"totalIndexados\":%zu,\"comparacoesAvl\":%lu,\"rotacoesAvl\":%lu,\"alturaArvore\":%d,\"rotaEncontrada\":false,\"total\":0,\"locais\":[]}",
+            dados_filtro.filtro.capacidade_minima,
+            resultado_avl.total_indexados,
+            resultado_avl.comparacoes,
+            resultado_avl.rotacoes,
+            resultado_avl.altura_arvore
+        );
+        enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
+        return;
+    }
+
+    const Local *sala_escolhida = NULL;
+    ResultadoBfs rota_escolhida;
+    resultado_bfs_inicializar(&rota_escolhida);
+
+    for (size_t i = 0; i < resultado_avl.quantidade; i++) {
+        size_t idx = resultado_avl.indices[i];
+        if (idx >= g_total_locais) {
+            continue;
+        }
+
+        ResultadoBfs rota_tentativa;
+        if (grafo_bfs_menor_rota_csv(GRAFO_PATH, origem, g_locais[idx].nome, &rota_tentativa) == 0) {
+            sala_escolhida = &g_locais[idx];
+            rota_escolhida = rota_tentativa;
+            break;
+        }
+    }
+
+    if (sala_escolhida == NULL) {
+        size_t idx = resultado_avl.indices[0];
+        if (idx < g_total_locais) {
+            sala_escolhida = &g_locais[idx];
+        }
+    }
+
+    char origem_json[160], destino_json[160];
+    json_escape(origem, origem_json, sizeof(origem_json));
+    json_escape(sala_escolhida != NULL ? sala_escolhida->nome : "", destino_json, sizeof(destino_json));
+
+    char body[RESP_BUF];
+    size_t cursor = 0;
+    int n = snprintf(
+        body + cursor,
+        sizeof(body) - cursor,
+        "{\"ok\":true,\"consulta\":\"capacidadeMin+origem\",\"metodoUsado\":\"arvore_avl_lower_bound(capacidade)+bfs_menor_rota\",\"capacidadeSolicitada\":%d,\"capacidadeEncontrada\":%d,\"origem\":\"%s\",\"destino\":\"%s\",\"totalIndexados\":%zu,\"comparacoesAvl\":%lu,\"rotacoesAvl\":%lu,\"alturaArvore\":%d,\"rotaEncontrada\":%s,\"distanciaBfs\":%d,\"verticesVisitadosBfs\":%lu,\"arestasAnalisadasBfs\":%lu,",
+        dados_filtro.filtro.capacidade_minima,
+        resultado_avl.capacidade_encontrada,
+        origem_json,
+        destino_json,
+        resultado_avl.total_indexados,
+        resultado_avl.comparacoes,
+        resultado_avl.rotacoes,
+        resultado_avl.altura_arvore,
+        rota_escolhida.tamanho > 0 ? "true" : "false",
+        rota_escolhida.distancia,
+        rota_escolhida.vertices_visitados,
+        rota_escolhida.arestas_analisadas
+    );
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    if (json_append_caminho_bfs(body, sizeof(body), &cursor, &rota_escolhida) != 0) {
+        responder_json_erro(client_fd, 500, "Resposta excedeu limite");
+        return;
+    }
+
+    n = snprintf(body + cursor, sizeof(body) - cursor, ",\"total\":%d,\"locais\":[", sala_escolhida != NULL ? 1 : 0);
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+    cursor += (size_t)n;
+
+    if (sala_escolhida != NULL &&
+        json_append_local(body, sizeof(body), &cursor, sala_escolhida, 0) != 0) {
+        responder_json_erro(client_fd, 500, "Resposta excedeu limite");
+        return;
+    }
+
+    n = snprintf(body + cursor, sizeof(body) - cursor, "]}");
+    if (n < 0 || (size_t)n >= sizeof(body) - cursor) {
+        responder_json_erro(client_fd, 500, "Falha ao montar resposta");
+        return;
+    }
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
+}
+
 static void adicionar_candidatos_de_resultado(
     const Local *locais,
     size_t total,
@@ -1658,7 +1830,7 @@ static void tratar_conexao(int client_fd) {
             200,
             "OK",
             "application/json; charset=utf-8",
-            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\",\"GET /api/ranking/capacidade\",\"GET /api/sugestao/avl\"]}"
+            "{\"ok\":true,\"servico\":\"campus_api\",\"rotas\":[\"GET /api/busca\",\"GET /api/locais\",\"POST /api/locais\",\"GET /api/ranking/capacidade\",\"GET /api/sugestao/avl\",\"GET /api/sugestao/avl-bfs\"]}"
         );
         return;
     }
@@ -1672,6 +1844,19 @@ static void tratar_conexao(int client_fd) {
 
         const char *query = strchr(uri, '?');
         responder_ranking_capacidade(client_fd, query == NULL ? "" : query + 1);
+        return;
+    }
+
+    // Rota combinada: AVL escolhe a sala e BFS calcula a menor rota ate ela.
+    if (strncmp(uri, "/api/sugestao/avl-bfs", 21) == 0 &&
+        (uri[21] == '\0' || uri[21] == '?')) {
+        if (strcmp(metodo_http, "GET") != 0) {
+            responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
+            return;
+        }
+
+        const char *query = strchr(uri, '?');
+        responder_sugestao_avl_bfs(client_fd, query == NULL ? "" : query + 1);
         return;
     }
 

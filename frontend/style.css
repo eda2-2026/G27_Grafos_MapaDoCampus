@@ -213,6 +213,36 @@ button.secondary {
   color: var(--muted);
 }
 
+.caminho-rota {
+  margin-bottom: 0.8rem;
+}
+
+.rota-passos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0 0 0.8rem;
+  padding: 0;
+}
+
+.rota-passos li {
+  position: relative;
+  border: 1px solid #c8e2dc;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: #184746;
+  padding: 0.36rem 0.65rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.rota-passos li:not(:last-child)::after {
+  content: ">";
+  margin-left: 0.45rem;
+  color: var(--muted);
+}
+
 .table-wrap {
   overflow-x: auto;
 }

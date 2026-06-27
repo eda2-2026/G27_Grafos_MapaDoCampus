@@ -22,6 +22,7 @@ const listaRanking = document.getElementById("listaRanking");
 const formSugestaoAvl = document.getElementById("formSugestaoAvl");
 const statusSugestaoAvl = document.getElementById("statusSugestaoAvl");
 const listaSugestaoAvl = document.getElementById("listaSugestaoAvl");
+const caminhoSugestaoAvl = document.getElementById("caminhoSugestaoAvl");
 const alertaConflito = document.getElementById("alertaConflito");
 //MERGE
 const formAgenda = document.getElementById("formAgenda");
@@ -99,6 +100,19 @@ function renderErroEmCard(elementoLista, mensagem) {
       <h4>Nao foi possivel carregar resultados</h4>
       <p class="local-card-meta">${escapeHtml(mensagem)}</p>
     </article>
+  `;
+}
+
+function renderCaminhoRota(elemento, caminho) {
+  if (!Array.isArray(caminho) || caminho.length === 0) {
+    elemento.innerHTML = `<p class="resultado-vazio">Nenhum caminho encontrado no grafo do campus.</p>`;
+    return;
+  }
+
+  elemento.innerHTML = `
+    <ol class="rota-passos">
+      ${caminho.map((ponto) => `<li>${escapeHtml(ponto)}</li>`).join("")}
+    </ol>
   `;
 }
 
@@ -220,18 +234,20 @@ async function carregarRankingCapacidade() {
   );
 }
 
-// Monta os parametros que serao enviados para a rota /api/sugestao/avl.
+// Monta os parametros que serao enviados para a rota /api/sugestao/avl-bfs.
 function montarQuerySugestaoAvl() {
   const params = new URLSearchParams();
 
-  // Le os campos da tela: capacidade obrigatoria e filtros opcionais.
+  // Le os campos da tela: capacidade e origem obrigatorias, filtros opcionais.
   const capacidade = document.getElementById("sCapacidade").value.trim();
+  const origem = document.getElementById("sOrigem").value.trim();
   const bloco = document.getElementById("sBloco").value.trim();
   const horario = document.getElementById("sHorario").value.trim();
   const temAr = document.getElementById("sTemAr").value;
 
-  // A AVL usa capacidadeMin como chave de busca: ela procura a menor capacidade >= valor digitado.
+  // A AVL usa capacidadeMin como chave; o BFS usa origem para calcular a menor rota.
   if (capacidade) params.set("capacidadeMin", capacidade);
+  if (origem) params.set("origem", origem);
   if (bloco) params.set("bloco", bloco);
   if (horario) params.set("horario", horario);
   if (temAr !== "") params.set("temAr", temAr);
@@ -239,30 +255,32 @@ function montarQuerySugestaoAvl() {
   return params;
 }
 
-// Chama o backend, recebe o resultado da AVL e renderiza as salas sugeridas.
+// Chama o backend, recebe o resultado da AVL + BFS e renderiza sala e caminho.
 async function carregarSugestaoAvl() {
   const params = montarQuerySugestaoAvl();
   const capacidade = Number(document.getElementById("sCapacidade").value.trim());
-  const dados = await fetchJson(`${API_BASE}/api/sugestao/avl?${params.toString()}`);
+  const dados = await fetchJson(`${API_BASE}/api/sugestao/avl-bfs?${params.toString()}`);
   const locais = dados.locais || [];
 
-  // Os cards usam a mesma funcao de renderizacao das outras listas do sistema.
   renderListaResultados(listaSugestaoAvl, locais, "Nenhuma sala atende esses criterios.");
+  renderCaminhoRota(caminhoSugestaoAvl, dados.caminho || []);
 
-  // Quando nao ha sugestao, ainda mostramos as metricas para evidenciar que a AVL foi consultada.
   if (locais.length === 0) {
     setStatus(
       statusSugestaoAvl,
-      `Metodo usado: ${dados.metodoUsado || "arvore_avl"} | Nenhuma capacidade suficiente encontrada | Indexados=${dados.totalIndexados ?? 0} | Comparacoes=${dados.comparacoes ?? "-"} | Rotacoes=${dados.rotacoes ?? "-"}.`
+      `Metodo usado: ${dados.metodoUsado || "arvore_avl+bfs"} | Nenhuma sala suficiente encontrada | Indexados=${dados.totalIndexados ?? 0} | ComparacoesAVL=${dados.comparacoesAvl ?? "-"}.`
     );
     return;
   }
 
-  // Quando ha sugestao, mostra capacidade encontrada e dados da arvore para a apresentacao.
   const sobra = Number(dados.capacidadeEncontrada) - capacidade;
+  const rotaTexto = dados.rotaEncontrada
+    ? `DistanciaBFS=${dados.distanciaBfs} conexoes | VisitadosBFS=${dados.verticesVisitadosBfs} | ArestasBFS=${dados.arestasAnalisadasBfs}`
+    : "BFS nao encontrou caminho para a sala escolhida";
+
   setStatus(
     statusSugestaoAvl,
-    `Metodo usado: ${dados.metodoUsado || "arvore_avl"} | Capacidade solicitada=${dados.capacidadeSolicitada} | Melhor capacidade=${dados.capacidadeEncontrada} | Sobra=${sobra} lugares | Altura=${dados.alturaArvore ?? "-"} | Rotacoes=${dados.rotacoes ?? "-"} | Comparacoes=${dados.comparacoes ?? "-"}.`
+    `Metodo usado: ${dados.metodoUsado || "arvore_avl+bfs"} | Origem=${dados.origem || "-"} | Destino=${dados.destino || "-"} | Capacidade solicitada=${dados.capacidadeSolicitada} | Melhor capacidade=${dados.capacidadeEncontrada} | Sobra=${sobra} lugares | AlturaAVL=${dados.alturaArvore ?? "-"} | RotacoesAVL=${dados.rotacoesAvl ?? "-"} | ComparacoesAVL=${dados.comparacoesAvl ?? "-"} | ${rotaTexto}.`
   );
 }
 
@@ -356,16 +374,18 @@ formRanking.addEventListener("submit", async (event) => {
   }
 });
 
-// Evento do formulario da AVL: evita reload da pagina e dispara a consulta na API.
+// Evento do formulario da AVL + BFS: evita reload da pagina e dispara a consulta na API.
 formSugestaoAvl.addEventListener("submit", async (event) => {
   event.preventDefault();
-  setStatus(statusSugestaoAvl, "Consultando arvore AVL...");
+  setStatus(statusSugestaoAvl, "Consultando AVL e calculando menor rota com BFS...");
+  caminhoSugestaoAvl.innerHTML = "";
 
   try {
     await carregarSugestaoAvl();
   } catch (erro) {
-    setStatus(statusSugestaoAvl, `Falha ao consultar AVL: ${erro.message}`, true);
+    setStatus(statusSugestaoAvl, `Falha ao consultar AVL + BFS: ${erro.message}`, true);
     renderErroEmCard(listaSugestaoAvl, erro.message);
+    caminhoSugestaoAvl.innerHTML = "";
   }
 });
 
@@ -428,7 +448,8 @@ window.excluirAgendamento = async function(id) {
   renderListaResultados(listaPesquisa, [], "Digite ao menos um filtro para pesquisar.");
   renderListaResultados(listaRanking, [], "Clique em gerar ranking para ver as maiores salas.");
   // Estado inicial da lista AVL antes do usuario consultar uma sugestao.
-  renderListaResultados(listaSugestaoAvl, [], "Informe a quantidade de alunos para receber uma sugestao.");
+  renderListaResultados(listaSugestaoAvl, [], "Informe a quantidade de alunos e a origem para receber uma sugestao com caminho.");
+  caminhoSugestaoAvl.innerHTML = "";
   renderListaResultados(listaAgenda, [], "Aguardando busca pela agenda do professor.");
   try {
     await carregarLocaisCadastrados();
