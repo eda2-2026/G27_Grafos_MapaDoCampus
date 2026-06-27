@@ -1,7 +1,7 @@
 # Mapa de Campus
 
-Número da Lista: Trabalho 3 - Árvores <br>
-Conteúdo da Disciplina: Árvores Binárias de Busca Balanceadas <br>
+Número da Lista: Trabalho 4 - Grafos <br>
+Conteúdo da Disciplina: Grafos <br>
 
 ## Alunas
 |Matrícula | Aluno |
