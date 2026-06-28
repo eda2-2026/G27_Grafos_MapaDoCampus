@@ -211,23 +211,26 @@ int grafo_bfs_menor_rota_csv(
 static void executar_dfs_acessibilidade(const GrafoCampus *grafo, int u, unsigned char *visitados, int id_interditado, int nivel) {
     visitados[u] = 1;
 
-    for (int i = 0; i < nivel - 1; i++) printf("               ");
-    printf("|_____DFS visit (G, %s)\n", grafo->vertices[u]);
+    for (int i = 0; i < nivel - 1; i++) printf("       ");
+    printf("|__DFS visit (G, %s)\n", grafo->vertices[u]);
 
-    //verifica todos os destinos possiveos na matriz
     for (size_t v = 0; v < grafo->total_vertices; v++) {
         if (grafo->adj[u][v] == 1) { 
             if ((int)v == id_interditado) {
-                for (int i = 0; i < nivel; i++) printf("               ");
-                printf("|_____[INTERDITADO] %s\n", grafo->vertices[v]);
-                for (int i = 0; i < nivel; i++) printf("               ");
-                printf("|___BT___|\n"); //backtracking visual
+                for (int i = 0; i < nivel; i++) printf("       ");
+                printf("|__[INTERDITADO] %s\n", grafo->vertices[v]);
+                
+                for (int i = 0; i < nivel; i++) printf("       ");
+                printf("|__BT__|\n");
             } 
             else if (visitados[v] == 0) {
                 executar_dfs_acessibilidade(grafo, (int)v, visitados, id_interditado, nivel + 1);
             }
         }
     }
+
+    for (int i = 0; i < nivel - 1; i++) printf("       ");
+    printf("|__BT__|\n");
 }
 
 int grafo_dfs_acessibilidade_csv(const char *caminho_csv, const char *origem, const char *interditado, char locais_isolados[][GRAFO_NOME_MAX], int *total_isolados) {

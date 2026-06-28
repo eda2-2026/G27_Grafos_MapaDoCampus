@@ -487,7 +487,7 @@ if (formAcessibilidade) {
 
         try {
       
-            const url = `/api/acessibilidade?origem=${encodeURIComponent(origem)}&interditado=${encodeURIComponent(interditado)}`;
+            const url = `http://localhost:8091/api/acessibilidade?origem=${encodeURIComponent(origem)}&interditado=${encodeURIComponent(interditado)}`;
             const response = await fetch(url);
             const data = await response.json();
 
