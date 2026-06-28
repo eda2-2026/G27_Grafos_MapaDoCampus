@@ -214,6 +214,7 @@ static void imprimir_indentacao_dfs(int nivel) {
     }
 }
 
+//Arvore visual para comportamento do DFS
 void executar_dfs_acessibilidade(Grafo *g, int u, int *visitados, int id_interditado, int nivel) {
     visitados[u] = 1;
 
@@ -236,4 +237,31 @@ void executar_dfs_acessibilidade(Grafo *g, int u, int *visitados, int id_interdi
         
         adj = adj->prox;
     }
+}
+
+int testar_acessibilidade_campus(Grafo *g, int id_origem, int id_interditado, int *ids_isolados, int capacidade_max) {
+    if (!g || id_origem < 0 || id_origem >= g->num_vertices) return 0;
+
+    int visitados[MAX_VERTICES];
+    for (int i = 0; i < g->num_vertices; i++) {
+        visitados[i] = 0;
+    }
+
+    printf("\nDFS(G)\n");
+    
+    executar_dfs_acessibilidade(g, id_origem, visitados, id_interditado, 1);
+
+    int total_isolados = 0;
+    for (int i = 0; i < g->num_vertices; i++) {
+        if (g->nomes[i][0] != '\0' && i != id_interditado) {
+            if (visitados[i] == 0) {
+                if (total_isolados < capacidade_max) {
+                    ids_isolados[total_isolados] = i;
+                }
+                total_isolados++;
+            }
+        }
+    }
+
+    return total_isolados;
 }
