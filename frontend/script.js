@@ -469,3 +469,55 @@ window.excluirAgendamento = async function(id) {
     renderErroEmCard(listaRanking, erro.message);
   }
 })();
+
+//DFS
+const formAcessibilidade = document.getElementById('formAcessibilidade');
+const resultadoAcessibilidade = document.getElementById('resultadoAcessibilidade');
+
+if (formAcessibilidade) {
+    formAcessibilidade.addEventListener('submit', async (e) => {
+        e.preventDefault(); 
+        
+        const origem = document.getElementById('origemAcessibilidade').value.trim();
+        const interditado = document.getElementById('interditadoAcessibilidade').value.trim();
+        
+        if (!origem || !interditado) return;
+
+        resultadoAcessibilidade.innerHTML = '<div class="alert alert-info">A varrer o mapa do campus...</div>';
+
+        try {
+      
+            const url = `/api/acessibilidade?origem=${encodeURIComponent(origem)}&interditado=${encodeURIComponent(interditado)}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (!response.ok) {
+                resultadoAcessibilidade.innerHTML = `<div class="alert alert-warning">Aviso: ${data.erro || 'Local não encontrado.'}</div>`;
+                return;
+            }
+            if (data.totalIsolados === 0) {
+                resultadoAcessibilidade.innerHTML = `
+                    <div class="alert alert-success shadow-sm">
+                        <h5 class="alert-heading">✅ Tudo Acessível!</h5>
+                        <p class="mb-0">O bloqueio em <b>${data.interditado}</b> não isolou nenhuma área. Existem rotas alternativas a partir de <b>${data.origem}</b>.</p>
+                    </div>
+                `;
+            } 
+            else {
+                let listaIsolados = data.locaisIsolados.map(local => `<li>${local}</li>`).join('');
+                resultadoAcessibilidade.innerHTML = `
+                    <div class="alert alert-danger shadow-sm">
+                        <h5 class="alert-heading">❌ Alerta de Isolamento!</h5>
+                        <p>Bloquear a área <b>${data.interditado}</b> cortou o acesso a <b>${data.totalIsolados}</b> local(is) a partir de <b>${data.origem}</b>.</p>
+                        <hr>
+                        <b>Áreas Inacessíveis:</b>
+                        <ul class="mb-0 mt-2">${listaIsolados}</ul>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            resultadoAcessibilidade.innerHTML = `<div class="alert alert-dark">Falha na comunicação com o servidor C.</div>`;
+            console.error('Erro no DFS:', error);
+        }
+    });
+}
