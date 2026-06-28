@@ -24,7 +24,11 @@ int grafo_bfs_menor_rota_csv(
 );
 
 //DFS
-void executar_dfs_acessibilidade(Grafo *g, int u, int *visitados, int id_interditado, int nivel);
-int testar_acessibilidade_campus(Grafo *g, int id_origem, int id_interditado, int *ids_isolados, int capacidade_max);
-
+int grafo_dfs_acessibilidade_csv(
+    const char *caminho_csv, 
+    const char *origem, 
+    const char *interditado, 
+    char locais_isolados[][GRAFO_NOME_MAX], 
+    int *total_isolados
+);
 #endif
