@@ -213,3 +213,27 @@ static void imprimir_indentacao_dfs(int nivel) {
         printf("               ");
     }
 }
+
+void executar_dfs_acessibilidade(Grafo *g, int u, int *visitados, int id_interditado, int nivel) {
+    visitados[u] = 1;
+
+    imprimir_indentacao_dfs(nivel - 1);
+    printf("|_____DFS visit (G, %s)\n", g->nomes[u]);
+
+    NoAdjacencia *adj = g->lista_adj[u];
+    while (adj != NULL) {
+        int v = adj->destino;
+
+        if (v == id_interditado) {
+            imprimir_indentacao_dfs(nivel);
+            printf("|_____[INTERDITADO] %s\n", g->nomes[v]);
+            imprimir_indentacao_dfs(nivel);
+            printf("|___BT___|\n");
+        } 
+        else if (visitados[v] == 0) {
+            executar_dfs_acessibilidade(g, v, visitados, id_interditado, nivel + 1);
+        }
+        
+        adj = adj->prox;
+    }
+}
