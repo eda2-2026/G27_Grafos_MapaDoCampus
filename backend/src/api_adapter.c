@@ -1878,6 +1878,20 @@ static void tratar_conexao(int client_fd) {
         return;
     }
 
+    // DFS --------------------------------------
+    if (strncmp(uri, "/api/acessibilidade", 19) == 0 &&
+        (uri[19] == '\0' || uri[19] == '?')) {
+        if (strcmp(metodo_http, "GET") != 0) {
+            responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
+            return;
+        }
+
+        const char *query = strchr(uri, '?');
+        responder_acessibilidade(client_fd, query == NULL ? "" : query + 1);
+        return;
+    }
+    // ------------------------------------------
+
  
     // ==========================================
     // ROTA MERGE SORT
