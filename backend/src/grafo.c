@@ -208,60 +208,53 @@ int grafo_bfs_menor_rota_csv(
 
 //DFS
 
-static void imprimir_indentacao_dfs(int nivel) {
-    for (int i = 0; i < nivel; i++) {
-        printf("               ");
-    }
-}
-
-//Arvore visual para comportamento do DFS
-void executar_dfs_acessibilidade(Grafo *g, int u, int *visitados, int id_interditado, int nivel) {
+static void executar_dfs_acessibilidade(const GrafoCampus *grafo, int u, unsigned char *visitados, int id_interditado, int nivel) {
     visitados[u] = 1;
 
-    imprimir_indentacao_dfs(nivel - 1);
-    printf("|_____DFS visit (G, %s)\n", g->nomes[u]);
+    for (int i = 0; i < nivel - 1; i++) printf("               ");
+    printf("|_____DFS visit (G, %s)\n", grafo->vertices[u]);
 
-    NoAdjacencia *adj = g->lista_adj[u];
-    while (adj != NULL) {
-        int v = adj->destino;
-
-        if (v == id_interditado) {
-            imprimir_indentacao_dfs(nivel);
-            printf("|_____[INTERDITADO] %s\n", g->nomes[v]);
-            imprimir_indentacao_dfs(nivel);
-            printf("|___BT___|\n");
-        } 
-        else if (visitados[v] == 0) {
-            executar_dfs_acessibilidade(g, v, visitados, id_interditado, nivel + 1);
-        }
-        
-        adj = adj->prox;
-    }
-}
-
-int testar_acessibilidade_campus(Grafo *g, int id_origem, int id_interditado, int *ids_isolados, int capacidade_max) {
-    if (!g || id_origem < 0 || id_origem >= g->num_vertices) return 0;
-
-    int visitados[MAX_VERTICES];
-    for (int i = 0; i < g->num_vertices; i++) {
-        visitados[i] = 0;
-    }
-
-    printf("\nDFS(G)\n");
-    
-    executar_dfs_acessibilidade(g, id_origem, visitados, id_interditado, 1);
-
-    int total_isolados = 0;
-    for (int i = 0; i < g->num_vertices; i++) {
-        if (g->nomes[i][0] != '\0' && i != id_interditado) {
-            if (visitados[i] == 0) {
-                if (total_isolados < capacidade_max) {
-                    ids_isolados[total_isolados] = i;
-                }
-                total_isolados++;
+    //verifica todos os destinos possiveos na matriz
+    for (size_t v = 0; v < grafo->total_vertices; v++) {
+        if (grafo->adj[u][v] == 1) { 
+            if ((int)v == id_interditado) {
+                for (int i = 0; i < nivel; i++) printf("               ");
+                printf("|_____[INTERDITADO] %s\n", grafo->vertices[v]);
+                for (int i = 0; i < nivel; i++) printf("               ");
+                printf("|___BT___|\n"); //backtracking visual
+            } 
+            else if (visitados[v] == 0) {
+                executar_dfs_acessibilidade(grafo, (int)v, visitados, id_interditado, nivel + 1);
             }
         }
     }
+}
 
-    return total_isolados;
+int grafo_dfs_acessibilidade_csv(const char *caminho_csv, const char *origem, const char *interditado, char locais_isolados[][GRAFO_NOME_MAX], int *total_isolados) {
+    GrafoCampus grafo;
+    if (carregar_grafo_csv(caminho_csv, &grafo) != 0) {
+        return -1;
+    }
+
+    int id_origem = encontrar_vertice(&grafo, origem);
+    int id_interditado = encontrar_vertice(&grafo, interditado);
+
+    if (id_origem < 0) return -1;
+
+    unsigned char visitados[GRAFO_MAX_VERTICES];
+    memset(visitados, 0, sizeof(visitados));
+
+    printf("\nDFS(G)\n");
+    executar_dfs_acessibilidade(&grafo, id_origem, visitados, id_interditado, 1);
+
+    *total_isolados = 0;
+    // acha os isolados
+    for (size_t i = 0; i < grafo.total_vertices; i++) {
+        if ((int)i != id_interditado && visitados[i] == 0) {
+            strncpy(locais_isolados[*total_isolados], grafo.vertices[i], GRAFO_NOME_MAX);
+            (*total_isolados)++;
+        }
+    }
+
+    return 0; 
 }
