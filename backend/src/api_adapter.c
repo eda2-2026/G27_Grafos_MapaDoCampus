@@ -35,7 +35,6 @@ static void responder_sugestao_avl_bfs(int client_fd, const char *query);
 static void tratar_api_locais_delete(int client_fd, const char *uri);
 static void responder_acessibilidade(int client_fd, const char *query);
 
-static Grafo *g_grafo_campus = NULL;
 
 typedef struct {
     FiltroLocal filtro;
@@ -2125,39 +2124,39 @@ static void tratar_api_locais_delete(int client_fd, const char *uri) {
 //DFS
 
 static void responder_acessibilidade(int client_fd, const char *query) {
-    char id_interditado_txt[16] = {0};
-    char id_origem_txt[16] = {0};
+    char origem[100] = {0};
+    char interditado[100] = {0};
 
-    query_get_param(query, "interditado", id_interditado_txt, sizeof(id_interditado_txt));
-    query_get_param(query, "origem", id_origem_txt, sizeof(id_origem_txt));
+    query_get_param(query, "origem", origem, sizeof(origem));
+    query_get_param(query, "interditado", interditado, sizeof(interditado));
 
-    int id_interditado = -1;
-    int id_origem = 0;
-
-    if (id_interditado_txt[0] != '\0') parse_int(id_interditado_txt, &id_interditado);
-    if (id_origem_txt[0] != '\0') parse_int(id_origem_txt, &id_origem);
-
-    if (g_grafo_campus == NULL) {
-        responder_json_erro(client_fd, 500, "Grafo de acessibilidade nao carregado");
+    if (origem[0] == '\0') {
+        responder_json_erro(client_fd, 400, "Origem obrigatoria");
         return;
     }
 
-    int ids_isolados[MAX_VERTICES];
-    int total_isolados = testar_acessibilidade_campus(g_grafo_campus, id_origem, id_interditado, ids_isolados, MAX_VERTICES);
+    char locais_isolados[256][100];
+    int total_isolados = 0;
+
+    int status = grafo_dfs_acessibilidade_csv(GRAFO_PATH, origem, interditado, locais_isolados, &total_isolados);
+
+    if (status != 0) {
+        responder_json_erro(client_fd, 404, "Origem ou arquivo de conexoes nao encontrado");
+        return;
+    }
 
     char body[RESP_BUF];
     size_t cursor = 0;
     
     int n = snprintf(body + cursor, sizeof(body) - cursor, 
-        "{\"ok\":true,\"origem\":%d,\"interditado\":%d,\"totalIsolados\":%d,\"locaisIsolados\":[",
-        id_origem, id_interditado, total_isolados);
+        "{\"ok\":true,\"origem\":\"%s\",\"interditado\":\"%s\",\"totalIsolados\":%d,\"locaisIsolados\":[",
+        origem, interditado, total_isolados);
     cursor += (size_t)n;
 
     for (int i = 0; i < total_isolados; i++) {
-        int id_iso = ids_isolados[i];
         n = snprintf(body + cursor, sizeof(body) - cursor, "%s\"%s\"",
             (i > 0) ? "," : "",
-            g_grafo_campus->nomes[id_iso]);
+            locais_isolados[i]);
         cursor += (size_t)n;
     }
 
