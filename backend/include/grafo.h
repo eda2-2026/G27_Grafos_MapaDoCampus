@@ -23,4 +23,8 @@ int grafo_bfs_menor_rota_csv(
     ResultadoBfs *resultado
 );
 
+//DFS
+void executar_dfs_acessibilidade(Grafo *g, int u, int *visitados, int id_interditado, int nivel);
+int testar_acessibilidade_campus(Grafo *g, int id_origem, int id_interditado, int *ids_isolados, int capacidade_max);
+
 #endif
