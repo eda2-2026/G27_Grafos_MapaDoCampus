@@ -33,6 +33,9 @@ static void responder_busca_relevancia(int client_fd, const char *query);
 static void responder_sugestao_avl(int client_fd, const char *query);
 static void responder_sugestao_avl_bfs(int client_fd, const char *query);
 static void tratar_api_locais_delete(int client_fd, const char *uri);
+static void responder_acessibilidade(int client_fd, const char *query);
+
+static Grafo *g_grafo_campus = NULL;
 
 typedef struct {
     FiltroLocal filtro;
@@ -280,6 +283,8 @@ static void inicializar_banco(void) {
     g_banco_inicializado = 1;
 
     (void)reconstruir_hash();
+
+    g_grafo_campus = carregar_grafo("backend/data/conexoes.csv");
 }
 
 //HASH
@@ -1873,7 +1878,7 @@ static void tratar_conexao(int client_fd) {
         return;
     }
 
-
+ 
     // ==========================================
     // ROTA MERGE SORT
     // ==========================================
@@ -2101,6 +2106,53 @@ static void tratar_api_locais_delete(int client_fd, const char *uri) {
         "{\"ok\":true,\"mensagem\":\"Agendamento excluido e reequilibrado via Arvore VP com sucesso!\"}");
     enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", resposta);
 }
+
+
+//DFS
+
+static void responder_acessibilidade(int client_fd, const char *query) {
+    char id_interditado_txt[16] = {0};
+    char id_origem_txt[16] = {0};
+
+    query_get_param(query, "interditado", id_interditado_txt, sizeof(id_interditado_txt));
+    query_get_param(query, "origem", id_origem_txt, sizeof(id_origem_txt));
+
+    int id_interditado = -1;
+    int id_origem = 0;
+
+    if (id_interditado_txt[0] != '\0') parse_int(id_interditado_txt, &id_interditado);
+    if (id_origem_txt[0] != '\0') parse_int(id_origem_txt, &id_origem);
+
+    if (g_grafo_campus == NULL) {
+        responder_json_erro(client_fd, 500, "Grafo de acessibilidade nao carregado");
+        return;
+    }
+
+    int ids_isolados[MAX_VERTICES];
+    int total_isolados = testar_acessibilidade_campus(g_grafo_campus, id_origem, id_interditado, ids_isolados, MAX_VERTICES);
+
+    char body[RESP_BUF];
+    size_t cursor = 0;
+    
+    int n = snprintf(body + cursor, sizeof(body) - cursor, 
+        "{\"ok\":true,\"origem\":%d,\"interditado\":%d,\"totalIsolados\":%d,\"locaisIsolados\":[",
+        id_origem, id_interditado, total_isolados);
+    cursor += (size_t)n;
+
+    for (int i = 0; i < total_isolados; i++) {
+        int id_iso = ids_isolados[i];
+        n = snprintf(body + cursor, sizeof(body) - cursor, "%s\"%s\"",
+            (i > 0) ? "," : "",
+            g_grafo_campus->nomes[id_iso]);
+        cursor += (size_t)n;
+    }
+
+    snprintf(body + cursor, sizeof(body) - cursor, "]}");
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
+}
+
+//DFS------------------------------------------------------------------------------------
 
 int main(int argc, char **argv) {
     int porta = 8091;
