@@ -191,6 +191,32 @@
       </div>
     </section>
 
+    <!--DFS: Verifica acessibilidade pelo campus se caso houver interdições-->
+    <div class="card mb-4 border-danger shadow-sm">
+      <div class="card-header bg-danger text-white">
+          <h5 class="mb-0">🚧 Simulador de Interdições (Acessibilidade)</h5>
+      </div>
+      <div class="card-body">
+          <p class="text-muted">
+              Descubra quais áreas do campus ficam isoladas se um corredor ou escada for bloqueado (Busca em Profundidade - DFS).
+          </p>
+          <form id="formAcessibilidade" class="row g-3">
+              <div class="col-md-5">
+                  <label for="origemAcessibilidade" class="form-label">Onde você está (Origem):</label>
+                  <input type="text" class="form-control" id="origemAcessibilidade" placeholder="Ex: Portaria" required>
+              </div>
+              <div class="col-md-5">
+                  <label for="interditadoAcessibilidade" class="form-label">Local Interditado (Obras):</label>
+                  <input type="text" class="form-control" id="interditadoAcessibilidade" placeholder="Ex: Escada UAC" required>
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                  <button type="submit" class="btn btn-danger w-100">Simular</button>
+              </div>
+          </form>
+          <div id="resultadoAcessibilidade" class="mt-4"></div>
+      </div>
+    </div>
+
     <section class="card">
       <h2>Agenda do Professor</h2>
       <form id="formAgenda" class="grid form-grid">

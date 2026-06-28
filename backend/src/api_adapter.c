@@ -283,7 +283,6 @@ static void inicializar_banco(void) {
 
     (void)reconstruir_hash();
 
-    g_grafo_campus = carregar_grafo("backend/data/conexoes.csv");
 }
 
 //HASH
