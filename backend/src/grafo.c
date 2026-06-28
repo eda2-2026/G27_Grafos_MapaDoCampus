@@ -205,3 +205,11 @@ int grafo_bfs_menor_rota_csv(
 
     return -1;
 }
+
+//DFS
+
+static void imprimir_indentacao_dfs(int nivel) {
+    for (int i = 0; i < nivel; i++) {
+        printf("               ");
+    }
+}
