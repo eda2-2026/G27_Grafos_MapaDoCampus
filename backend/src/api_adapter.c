@@ -33,6 +33,8 @@ static void responder_busca_relevancia(int client_fd, const char *query);
 static void responder_sugestao_avl(int client_fd, const char *query);
 static void responder_sugestao_avl_bfs(int client_fd, const char *query);
 static void tratar_api_locais_delete(int client_fd, const char *uri);
+static void responder_acessibilidade(int client_fd, const char *query);
+
 
 typedef struct {
     FiltroLocal filtro;
@@ -280,6 +282,7 @@ static void inicializar_banco(void) {
     g_banco_inicializado = 1;
 
     (void)reconstruir_hash();
+
 }
 
 //HASH
@@ -1873,7 +1876,21 @@ static void tratar_conexao(int client_fd) {
         return;
     }
 
+    // DFS --------------------------------------
+    if (strncmp(uri, "/api/acessibilidade", 19) == 0 &&
+        (uri[19] == '\0' || uri[19] == '?')) {
+        if (strcmp(metodo_http, "GET") != 0) {
+            responder_json_erro(client_fd, 405, "Metodo HTTP nao suportado");
+            return;
+        }
 
+        const char *query = strchr(uri, '?');
+        responder_acessibilidade(client_fd, query == NULL ? "" : query + 1);
+        return;
+    }
+    // ------------------------------------------
+
+ 
     // ==========================================
     // ROTA MERGE SORT
     // ==========================================
@@ -2101,6 +2118,53 @@ static void tratar_api_locais_delete(int client_fd, const char *uri) {
         "{\"ok\":true,\"mensagem\":\"Agendamento excluido e reequilibrado via Arvore VP com sucesso!\"}");
     enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", resposta);
 }
+
+
+//DFS
+
+static void responder_acessibilidade(int client_fd, const char *query) {
+    char origem[100] = {0};
+    char interditado[100] = {0};
+
+    query_get_param(query, "origem", origem, sizeof(origem));
+    query_get_param(query, "interditado", interditado, sizeof(interditado));
+
+    if (origem[0] == '\0') {
+        responder_json_erro(client_fd, 400, "Origem obrigatoria");
+        return;
+    }
+
+    char locais_isolados[256][100];
+    int total_isolados = 0;
+
+    int status = grafo_dfs_acessibilidade_csv(GRAFO_PATH, origem, interditado, locais_isolados, &total_isolados);
+
+    if (status != 0) {
+        responder_json_erro(client_fd, 404, "Origem ou arquivo de conexoes nao encontrado");
+        return;
+    }
+
+    char body[RESP_BUF];
+    size_t cursor = 0;
+    
+    int n = snprintf(body + cursor, sizeof(body) - cursor, 
+        "{\"ok\":true,\"origem\":\"%s\",\"interditado\":\"%s\",\"totalIsolados\":%d,\"locaisIsolados\":[",
+        origem, interditado, total_isolados);
+    cursor += (size_t)n;
+
+    for (int i = 0; i < total_isolados; i++) {
+        n = snprintf(body + cursor, sizeof(body) - cursor, "%s\"%s\"",
+            (i > 0) ? "," : "",
+            locais_isolados[i]);
+        cursor += (size_t)n;
+    }
+
+    snprintf(body + cursor, sizeof(body) - cursor, "]}");
+
+    enviar_resposta(client_fd, 200, "OK", "application/json; charset=utf-8", body);
+}
+
+//DFS------------------------------------------------------------------------------------
 
 int main(int argc, char **argv) {
     int porta = 8091;

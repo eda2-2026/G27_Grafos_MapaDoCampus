@@ -191,6 +191,53 @@
       </div>
     </section>
 
+    <!--DFS: Verifica acessibilidade pelo campus se caso houver interdições-->
+    <div class="card mb-4 border-danger shadow-sm">
+      <div class="card-header bg-danger text-white">
+          <h2 class="mb-0">🚧 Simulador de Interdições (Acessibilidade)</h2>
+      </div>
+      <div class="card-body">
+          <p class="text-muted">
+              Descubra quais áreas do campus ficam isoladas se um corredor ou escada for bloqueado (Busca em Profundidade - DFS).
+          </p>
+          <details class="mb-4" style="font-size: 0.9em; background: #fff5f5; padding: 12px; border-radius: 6px; border: 1px solid #ffcccc;">
+            <summary style="cursor: pointer; font-weight: bold; color: #dc3545;">
+                Ver guia de locais disponíveis no Grafo (Clique aqui)
+            </summary>
+            <div class="mt-2 text-muted" style="line-height: 1.6;">
+                <strong> Zonas de Acesso:</strong>
+                <ul>
+                    <li><strong>UAC:</strong> Corredor UAC 1, Corredor UAC 2, Hall UAC, Escada UAC, Saida UAC.</li>
+                    <li><strong>UED:</strong> Entrada UED, Corredor UED 1, Corredor UED 2, Escada UED.</li>
+                    <li><strong>Externo:</strong> Caminho externo.</li>
+                </ul>
+                <strong> Salas e Locais:</strong>
+                <ul>
+                    <li><strong>UAC (Salas):</strong> I1 a I10, S1 a S10, Biblioteca, Secretaria, Auditorio.</li>
+                    <li><strong>UED (Salas):</strong> Sala 201 a Sala 214.</li>
+                    <li><strong>UED (Laboratórios):</strong> Mocap, Lab Fisica 1, Lab Fisica 2, Lab Quimica, Lab Quimica Exp, Lab PED1, Lab PED2, Lab Termodinamica, Lab Mecanica Fluidos, Lab Automacao, Lab Eletromagnetismo.</li>
+                    <li><strong>Outros:</strong> RU, Conteiner 01.</li>
+                </ul>
+            </div>
+          </details>
+  
+          <form id="formAcessibilidade" class="row g-3">
+              <div class="col-md-5">
+                  <label for="origemAcessibilidade" class="form-label">Onde você está (Origem):</label>
+                  <input type="text" class="form-control" id="origemAcessibilidade" placeholder="Ex: Portaria" required>
+              </div>
+              <div class="col-md-5">
+                  <label for="interditadoAcessibilidade" class="form-label">Local Interditado (Obras):</label>
+                  <input type="text" class="form-control" id="interditadoAcessibilidade" placeholder="Ex: Escada UAC" required>
+              </div>
+              <div class="col-md-2 d-flex align-items-end">
+                  <button type="submit" class="btn btn-danger w-100">Simular</button>
+              </div>
+          </form>
+          <div id="resultadoAcessibilidade" class="mt-4"></div>
+      </div>
+    </div>
+
     <section class="card">
       <h2>Agenda do Professor</h2>
       <form id="formAgenda" class="grid form-grid">

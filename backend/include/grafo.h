@@ -23,4 +23,12 @@ int grafo_bfs_menor_rota_csv(
     ResultadoBfs *resultado
 );
 
+//DFS
+int grafo_dfs_acessibilidade_csv(
+    const char *caminho_csv, 
+    const char *origem, 
+    const char *interditado, 
+    char locais_isolados[][GRAFO_NOME_MAX], 
+    int *total_isolados
+);
 #endif

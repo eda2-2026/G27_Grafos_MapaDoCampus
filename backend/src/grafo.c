@@ -205,3 +205,59 @@ int grafo_bfs_menor_rota_csv(
 
     return -1;
 }
+
+//DFS
+
+static void executar_dfs_acessibilidade(const GrafoCampus *grafo, int u, unsigned char *visitados, int id_interditado, int nivel) {
+    visitados[u] = 1;
+
+    for (int i = 0; i < nivel - 1; i++) printf("       ");
+    printf("|__DFS visit (G, %s)\n", grafo->vertices[u]);
+
+    for (size_t v = 0; v < grafo->total_vertices; v++) {
+        if (grafo->adj[u][v] == 1) { 
+            if ((int)v == id_interditado) {
+                for (int i = 0; i < nivel; i++) printf("       ");
+                printf("|__[INTERDITADO] %s\n", grafo->vertices[v]);
+                
+                for (int i = 0; i < nivel; i++) printf("       ");
+                printf("|__BT__|\n");
+            } 
+            else if (visitados[v] == 0) {
+                executar_dfs_acessibilidade(grafo, (int)v, visitados, id_interditado, nivel + 1);
+            }
+        }
+    }
+
+    for (int i = 0; i < nivel - 1; i++) printf("       ");
+    printf("|__BT__|\n");
+}
+
+int grafo_dfs_acessibilidade_csv(const char *caminho_csv, const char *origem, const char *interditado, char locais_isolados[][GRAFO_NOME_MAX], int *total_isolados) {
+    GrafoCampus grafo;
+    if (carregar_grafo_csv(caminho_csv, &grafo) != 0) {
+        return -1;
+    }
+
+    int id_origem = encontrar_vertice(&grafo, origem);
+    int id_interditado = encontrar_vertice(&grafo, interditado);
+
+    if (id_origem < 0) return -1;
+
+    unsigned char visitados[GRAFO_MAX_VERTICES];
+    memset(visitados, 0, sizeof(visitados));
+
+    printf("\nDFS(G)\n");
+    executar_dfs_acessibilidade(&grafo, id_origem, visitados, id_interditado, 1);
+
+    *total_isolados = 0;
+    // acha os isolados
+    for (size_t i = 0; i < grafo.total_vertices; i++) {
+        if ((int)i != id_interditado && visitados[i] == 0) {
+            strncpy(locais_isolados[*total_isolados], grafo.vertices[i], GRAFO_NOME_MAX);
+            (*total_isolados)++;
+        }
+    }
+
+    return 0; 
+}
