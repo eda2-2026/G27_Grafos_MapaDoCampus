@@ -1,7 +1,7 @@
 # Mapa de Campus
 
-Número da Lista: Trabalho 3 - Árvores <br>
-Conteúdo da Disciplina: Árvores Binárias de Busca Balanceadas <br>
+Número da Lista: Trabalho 4 - Grafos <br>
+Conteúdo da Disciplina: Grafos <br>
 
 ## Alunas
 |Matrícula | Aluno |
@@ -153,4 +153,4 @@ curl "http://localhost:8091/api/busca?bloco=UAC&capacidadeMin=40"
 ## Apresentação em Vídeo
 **Vídeo de Apresentação e Explicação do Código:**
 
-[![Explicação do Código](https://img.youtube.com/vi/RTrcx9Xhhbk/0.jpg)](https://www.youtube.com/watch?v=RTrcx9Xhhbk)
+[![Explicação do Código](https://img.youtube.com/vi/kG7OfFlFz8E/0.jpg)](https://youtu.be/kG7OfFlFz8E)
