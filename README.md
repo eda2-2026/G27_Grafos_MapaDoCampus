@@ -74,8 +74,12 @@ O projeto também mantém as otimizações das entregas anteriores:
 **7. Estrutura do Código: DFS de Acessibilidade**
 ![Trecho do código responsável pela análise de acessibilidade utilizando DFS](./docs/Print7_DFS_Acessibilidade.PNG)
 
-**8. Servidores em Execução**
-![Terminais demonstrando os servidores e aplicação em execução](./docs/Print8_Terminais_Entrega4.PNG)
+**8. Comportamento DFS - Terminal**
+![Terminal exibindo o comportamento da execução da DFS](./docs/Print8_Terminal_DFS.PNG)
+
+**9. Servidores em Execução**
+![Terminais demonstrando os servidores e aplicação em execução](./docs/Print9_Terminais_Entrega4.PNG)
+
 
 
 ## Instalação 
