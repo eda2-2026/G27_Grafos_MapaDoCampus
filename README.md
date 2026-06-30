@@ -1,7 +1,7 @@
 # Mapa de Campus
 
-Número da Lista: Trabalho 3 - Árvores <br>
-Conteúdo da Disciplina: Árvores Binárias de Busca Balanceadas <br>
+Número da Lista: Trabalho 4 - Grafos <br>
+Conteúdo da Disciplina: Grafos <br>
 
 ## Alunas
 |Matrícula | Aluno |
@@ -12,82 +12,70 @@ Conteúdo da Disciplina: Árvores Binárias de Busca Balanceadas <br>
 ## Sobre
 O **Mapa de Campus** é um serviço projetado para gerenciar e consultar o catálogo de locais de um campus universitário (salas, laboratórios, auditórios, etc.). O principal objetivo deste projeto é aplicar estruturas de dados de alto desempenho na prática, conectando um backend nativo em C a uma interface Web de pesquisas, filtros e cadastros dinâmicos.
 
-Nesta **Entrega 3**, o sistema evoluiu para incorporar o poder das **Árvores Binárias de Busca Balanceadas**, garantindo tempo de resposta logarítmico O(log n) para operações críticas de negócio. O projeto agora possui duas funcionalidades centrais baseadas nessas estruturas:
+Nesta **Entrega 4**, o sistema evoluiu para incorporar **Grafos** ao mapa do campus. A base de locais continua sendo consultada e filtrada pelas estruturas das entregas anteriores, mas agora o campus também é modelado como uma rede de conexões entre salas, corredores, escadas, halls e áreas externas. Com isso, o sistema passa a responder perguntas de deslocamento e acessibilidade.
 
-- **Sugestão Inteligente de Sala (Árvore AVL — Marina):** O usuário informa a quantidade de alunos e filtros opcionais (`bloco`, `horário`, `temAr`). O backend monta dinamicamente uma Árvore AVL indexada por capacidade. Através de uma busca do tipo *lower bound*, o sistema navega na árvore balanceada para retornar a menor capacidade maior ou igual à solicitada (estratégia *best fit*). Cada nó da AVL gerencia uma lista interna de salas com a mesma capacidade.
+- **Mapa do Campus como Grafo:** As conexões físicas estão em `backend/data/conexoes.csv`. Cada local é tratado como vértice e cada ligação como aresta não direcionada. O backend carrega esse arquivo em uma matriz de adjacência para executar percursos sobre o campus.
 
-- **Sugestão de Sala com Menor Rota (AVL + BFS):** O usuário informa a quantidade de alunos e o local de origem. Primeiro, a AVL encontra a menor sala suficiente para a turma. Em seguida, o backend carrega o grafo de conexões do campus e usa BFS para retornar o menor caminho entre a origem e a sala sugerida.
+- **Sugestão de Sala com Menor Rota (AVL + BFS):** O usuário informa a quantidade de alunos e o local de origem. Primeiro, a AVL encontra salas suficientes pela estratégia *best fit*. Em seguida, o backend usa **BFS** no grafo do campus para escolher uma sala alcançável com a menor quantidade de conexões e retornar o caminho até ela.
 
-- **Validador Dinâmico de Conflitos (Árvore Vermelho-Preta — Júlia):** O sistema impede o agendamento duplo de salas. Ao tentar cadastrar uma nova aula, o backend constrói uma Árvore Vermelho-Preta na memória RAM contendo todas as aulas daquela sala específica, indexadas em minutos. A árvore atua como uma barreira geométrica de tempo:
-  - **Inserção Segura:** Se os horários se sobrepõem, a árvore bloqueia o cadastro e emite um alerta vermelho indicando a aula conflitante. Aulas estritamente "coladas" são permitidas pela matemática da árvore.
-  - **Remoção e Duplo Preto:** O sistema permite a exclusão de agendamentos. Ao deletar uma aula, o motor da Árvore Vermelho-Preta identifica se o nó era preto e aciona as rotações de reequilíbrio (Casos do Duplo Preto) diretamente no servidor, atualizando o arquivo CSV em seguida.
+- **Simulador de Interdições com DFS:** O usuário informa uma origem e um ponto interditado. O backend executa **DFS** evitando o vértice bloqueado e retorna quais locais ficam isolados a partir da origem escolhida.
 
-O projeto também mantém as otimizações das entregas anteriores, atuando como um roteador inteligente:
+O projeto também mantém as otimizações das entregas anteriores:
 - **Buscas (O(1) a O(log n)):** Tabela Hash para nomes exatos, Busca Binária, Sequencial Indexada e Interpolação para dados numéricos.
 - **Ordenação Dinâmica:** Heap Sort (ranking de capacidade), Merge Sort (agenda estável do professor), Quick Sort (busca por relevância) e Insertion Sort com sentinela (cadastro físico).
+- **Árvores Balanceadas:** AVL para sugestão por capacidade e Árvore Vermelho-Preta para validação e remoção de agendamentos sem conflito.
 
-## Casos de Uso das Árvores Balanceadas
+## Casos de Uso da Entrega 4
 
-**1. Melhor sala para uma turma (Best Fit) — Árvore AVL**
-> Ao informar a quantidade de alunos, o sistema indexa as salas por capacidade em uma AVL e procura o "encaixe perfeito". Se a turma tem 35 alunos, a árvore não varre o banco todo; ela desce os galhos e retorna as salas de capacidade 35 ou a mais próxima superior (ex: 40).
+**1. Melhor sala com menor caminho — AVL + BFS**
+> O usuário informa a origem e a quantidade de alunos. A AVL seleciona salas com capacidade suficiente e o BFS percorre o grafo do campus por níveis para devolver a rota com menos conexões até a sala escolhida.
 > **Tela:** Seção "Sugestão inteligente de sala".
 
-**2. Prevenção de Conflito de Horário — Árvore Vermelho-Preta**
-> Ao tentar cadastrar uma nova sala/aula, a Árvore VP mapeia o tempo. Se você tenta marcar MD2 das 08h às 10h na Sala I1, mas já existe Algoritmos nesse horário, a tela emite um alerta vermelho imediato e bloqueia o banco de dados.
-> **Tela:** Formulário "Cadastro de Local" → Disparo do Alerta.
+**2. Simulação de interdição — DFS**
+> O usuário informa onde está e qual ponto do campus foi bloqueado. A DFS visita os vértices alcançáveis sem passar pelo local interditado e lista os ambientes que ficaram inacessíveis.
+> **Tela:** Seção "Simulador de Interdições (Acessibilidade)".
 
-**3. Exclusão e Reequilíbrio (Duplo Preto) — Árvore Vermelho-Preta**
-> Cada sala listada possui um botão "Excluir Agendamento". Ao confirmar a exclusão, a requisição DELETE aciona o backend em C. O nó correspondente é retirado da Árvore Vermelho-Preta. Se o nó for Preto, o sistema executa as rotações para reequilibrar a altura negra da árvore de forma invisível para o usuário, mas visível nos logs do servidor.
-> **Tela:** Botão "🗑️ Excluir Agendamento" nos cards de locais.
+**3. Grafo persistido em CSV**
+> O arquivo `backend/data/conexoes.csv` descreve o mapa usado pelos percursos. Isso permite alterar a topologia do campus sem mexer na lógica dos algoritmos.
+> **Arquivo:** `backend/data/conexoes.csv`.
 
-**4. Melhor sala com menor caminho — AVL + BFS**
-> O usuário informa a origem e a quantidade de alunos. A AVL seleciona a menor capacidade suficiente e o BFS percorre o grafo do campus por níveis para devolver a rota com menos conexões até a sala escolhida.
-> **Tela:** Seção "Sugestão de sala com menor rota".
+**4. Funcionalidades mantidas das entregas anteriores**
+> Buscas, ordenações, AVL e Árvore Vermelho-Preta continuam disponíveis para consulta, ranking, cadastro, agenda e validação de conflitos.
+> **Telas:** Pesquisa de locais, ranking, cadastro e agenda do professor.
 
 ### 📝 Nota de Arquitetura e Implementação
 
-> **Observação para a Avaliação:** Para fins de organização, as lógicas das árvores foram estritamente modularizadas:
+> **Observação para a Avaliação:** Para fins de organização, as lógicas foram modularizadas:
 >
+> - `grafo.c` / `grafo.h`: Contém a carga do grafo a partir do CSV, a matriz de adjacência, o BFS de menor rota e a DFS de acessibilidade com local interditado.
 > - `arvore_avl.c` / `arvore_avl.h`: Contém a lógica de rotações por Fator de Balanceamento e a busca otimizada *lower bound* para a sugestão de capacidades.
 > - `arvore_vp.c` / `arvore_vp.h`: Contém o motor do nó sentinela (`T_nil`), o reequilíbrio por cores (Tio Vermelho/Preto na inserção) e a resolução do complexo caso do Duplo Preto na remoção de agendamentos.
 
 ## Screenshots
 
-**1. Interface: Sugestão Inteligente de Sala (Árvore AVL)**
-![Tela da seção de sugestão inteligente de sala com resultados da AVL](./docs/Print1-SugestaoSala_AVL.PNG)
+**1. Interface: Sugestão de Sala com Rota (AVL + BFS)**
+`docs/Print1_SugestaoSala_Rota_BFS.PNG`
 
-**2. Interface: Conflito de Horário Detectado (Árvore Vermelho-Preta)**
-![Alerta vermelho de conflito de horário emitido pela Árvore VP](./docs/Print2_Conflito_Arvorevp.PNG)
+**2. Interface: Caminho Retornado pelo BFS**
+`docs/Print2_Caminho_BFS.PNG`
 
-**3. Interface: Cadastro sem Conflito (Árvore Vermelho-Preta)**
-![Confirmação verde de horário verificado com sucesso pela Árvore VP](./docs/Print3_SemConflito_Arvorevp.PNG)
+**3. Interface: Simulador de Interdições antes da Consulta**
+`docs/Print3_Simulador_Interdicoes_DFS.PNG`
 
-**4. Interface: Campo para Excluir Agendamento**
-![Cards de locais cadastrados com botão de excluir agendamento](./docs/Print4_CampoParaExcluirAgendamento.PNG)
+**4. Interface: Resultado da DFS com Locais Isolados**
+`docs/Print4_Resultado_DFS_Isolados.PNG`
 
-**5. Estrutura do Código: Nó AVL e Inicialização do Resultado**
-![Trecho do código mostrando a struct NoAvlCapacidade e a função resultado_avl_inicializar](./docs/Print5_noAvlCapacidade.PNG)
+**5. Estrutura do Código: Grafo, Matriz de Adjacência e Carga do CSV**
+`docs/Print5_Grafo_MatrizAdjacencia_CSV.PNG`
 
-**6. Estrutura do Código: Filtro da Busca Inteligente AVL**
-![Trecho do código mostrando a função local_passa_filtros_sem_capacidade](./docs/Print6_filtroBuscaIntelienteAVL.PNG)
+**6. Estrutura do Código: BFS de Menor Rota**
+`docs/Print6_BFS_MenorRota.PNG`
 
-**7. Estrutura do Código: Rotação Direita da AVL**
-![Trecho do código mostrando a função rotacao_direita da AVL](./docs/Print7_rotacaoDireitaAVL.PNG)
+**7. Estrutura do Código: DFS de Acessibilidade**
+`docs/Print7_DFS_Acessibilidade.PNG`
 
-**8. Estrutura do Código: Inicialização da Árvore Vermelho-Preta**
-![Trecho do código mostrando a função inicializar_arvore_vp e o nó sentinela T_nil](./docs/Print8_inicializaArvoreVP.PNG)
-
-**9. Estrutura do Código: Conserta Inserção VP**
-![Trecho do código mostrando a função conserta_insercao_vp com os casos de tio vermelho e preto](./docs/Print9_consertaInsercaoVP.PNG)
-
-**10. Estrutura do Código: Inserção na Árvore VP**
-![Trecho do código mostrando a função inserir_arvore_vp](./docs/Print10_insereVP.PNG)
-
-**11. Estrutura do Código: Conserta Remoção VP (Duplo Preto)**
-![Trecho do código mostrando a função conserta_remocao_vp com os casos do Duplo Preto](./docs/Print11_consertaRemocaoVP.PNG)
-
-**12. Servidores em Execução (Estabilidade)**
-![Terminais rodando o servidor Backend em C e o Frontend simultaneamente](./docs/Print12_Terminais.PNG)
+**8. Servidores em Execução**
+`docs/Print8_Terminais_Entrega4.PNG`
 
 ## Instalação 
 Linguagem: C (Backend) e HTML/JS/CSS (Frontend)<br>
@@ -130,6 +118,9 @@ Após rodar os dois comandos, abra o seu navegador e acesse: `http://localhost:5
   * Parâmetros obrigatórios: `capacidadeMin` e `origem` (ex: `GET /api/sugestao/avl-bfs?capacidadeMin=73&origem=Biblioteca&bloco=UAC`).
   * Parâmetros opcionais: `bloco`, `horario`, `temAr`, `andar`, `tipo`, `responsavel`, `materia`.
   * A resposta inclui métricas da AVL e do BFS: `comparacoesAvl`, `rotacoesAvl`, `alturaArvore`, `distanciaBfs`, `verticesVisitadosBfs`, `arestasAnalisadasBfs` e `caminho`.
+* `GET /api/acessibilidade`: Simulação de interdição usando **DFS** no grafo do campus.
+  * Parâmetros obrigatórios: `origem` e `interditado` (ex: `GET /api/acessibilidade?origem=Biblioteca&interditado=Escada%20UAC`).
+  * A resposta informa `totalIsolados` e `locaisIsolados`, indicando quais pontos não são alcançáveis a partir da origem sem passar pelo local interditado.
 
 *Exemplo de requisição de busca nativa via terminal (cURL):*
 ```bash
@@ -139,18 +130,21 @@ curl "http://localhost:8091/api/busca?bloco=UAC&capacidadeMin=40"
 ## Outros 
 **Estrutura de Pastas do Projeto:**
 * `backend/include`: Contratos compartilhados (structs e assinaturas).
-* `backend/src`: Implementações em C (métodos de busca clássicos, Busca Hash, algoritmos de ordenação e API).
-* `backend/data`: Banco local em CSV populado com as salas.
+* `backend/src`: Implementações em C (grafos, métodos de busca clássicos, Busca Hash, algoritmos de ordenação, árvores e API).
+* `backend/data`: Banco local em CSV com as salas (`locais.csv`) e conexões do grafo do campus (`conexoes.csv`).
 * `frontend`: Interface de pesquisa, filtros, cadastro e ranking conectada à API.
 * `docs`: Setup e organização da equipe (veja o guia completo em [docs/SETUP.md](docs/SETUP.md)).
 
 **Destaques da Arquitetura:**
-* **Modularidade:** As lógicas da AVL e da Árvore Vermelho-Preta foram isoladas em módulos próprios (`arvore_avl.c` e `arvore_vp.c`), separados da infraestrutura HTTP.
+* **Grafo do Campus:** `conexoes.csv` descreve vértices e arestas; `grafo.c` carrega essa estrutura e executa BFS e DFS.
+* **BFS para Menor Rota:** A sugestão AVL + BFS combina capacidade mínima com caminho de menor número de conexões.
+* **DFS para Acessibilidade:** A simulação de interdição percorre o grafo evitando o local bloqueado e identifica pontos isolados.
+* **Modularidade:** As lógicas de Grafo, AVL e Árvore Vermelho-Preta foram isoladas em módulos próprios, separados da infraestrutura HTTP.
 * **Roteamento de Ordenação:** Insertion Sort para inserção pontual, Quick Sort para buscas gerais, Merge Sort para ordenações estáveis e Heap Sort para rankings.
 * **Roteamento de Busca:** O sistema seleciona automaticamente entre Tabela Hash, Busca Binária, Busca por Interpolação e Busca Sequencial Indexada conforme o parâmetro recebido.
 * **Case-Insensitive Search na Hash:** Varredura caractere por caractere com conversão para *lowercase* em tempo de execução, permitindo encontrar locais independentemente da formatação textual da query.
 
 ## Apresentação em Vídeo
-**Vídeo de Apresentação e Explicação do Código:**
+**Vídeo de Apresentação e Explicação do Código da Entrega 4:**
 
-[![Explicação do Código](https://img.youtube.com/vi/RTrcx9Xhhbk/0.jpg)](https://www.youtube.com/watch?v=RTrcx9Xhhbk)
+[![Explicação do Código](https://img.youtube.com/vi/kG7OfFlFz8E/0.jpg)](https://youtu.be/kG7OfFlFz8E)
