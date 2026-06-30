@@ -54,28 +54,29 @@ O projeto também mantém as otimizações das entregas anteriores:
 ## Screenshots
 
 **1. Interface: Sugestão de Sala com Rota (AVL + BFS)**
-`docs/Print1_SugestaoSala_Rota_BFS.PNG`
+![Tela da interface de sugestão de sala com rota utilizando AVL e BFS](./docs/Print1_SugestaoSala_Rota_BFS.PNG)
 
 **2. Interface: Caminho Retornado pelo BFS**
-`docs/Print2_Caminho_BFS.PNG`
+![Tela exibindo o caminho retornado pelo algoritmo BFS](./docs/Print2_Caminho_BFS.PNG)
 
 **3. Interface: Simulador de Interdições antes da Consulta**
-`docs/Print3_Simulador_Interdicoes_DFS.PNG`
+![Tela do simulador de interdições antes da execução da busca](./docs/Print3_Simulador_Interdicoes_DFS.PNG)
 
 **4. Interface: Resultado da DFS com Locais Isolados**
-`docs/Print4_Resultado_DFS_Isolados.PNG`
+![Resultado da DFS destacando locais isolados devido às interdições](./docs/Print4_Resultado_DFS_Isolados.PNG)
 
 **5. Estrutura do Código: Grafo, Matriz de Adjacência e Carga do CSV**
-`docs/Print5_Grafo_MatrizAdjacencia_CSV.PNG`
+![Trecho do código mostrando a implementação do grafo, matriz de adjacência e leitura do CSV](./docs/Print5_Grafo_MatrizAdjacencia_CSV.PNG)
 
 **6. Estrutura do Código: BFS de Menor Rota**
-`docs/Print6_BFS_MenorRota.PNG`
+![Trecho do código responsável pela busca da menor rota utilizando BFS](./docs/Print6_BFS_MenorRota.PNG)
 
 **7. Estrutura do Código: DFS de Acessibilidade**
-`docs/Print7_DFS_Acessibilidade.PNG`
+![Trecho do código responsável pela análise de acessibilidade utilizando DFS](./docs/Print7_DFS_Acessibilidade.PNG)
 
 **8. Servidores em Execução**
-`docs/Print8_Terminais_Entrega4.PNG`
+![Terminais demonstrando os servidores e aplicação em execução](./docs/Print8_Terminais_Entrega4.PNG)
+
 
 ## Instalação 
 Linguagem: C (Backend) e HTML/JS/CSS (Frontend)<br>
